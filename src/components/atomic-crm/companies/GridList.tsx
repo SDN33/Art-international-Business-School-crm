@@ -10,7 +10,7 @@ const LoadingGridList = () => (
   <div className="flex flex-wrap w-[1008px] gap-1">
     {times(15, (key) => (
       <div
-        className="h-[200px] w-[194px] flex flex-col bg-gray-200"
+        className="h-[200px] w-[194px] flex flex-col bg-muted"
         key={key}
       />
     ))}

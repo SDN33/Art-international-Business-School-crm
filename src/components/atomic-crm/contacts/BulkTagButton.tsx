@@ -163,7 +163,7 @@ export function BulkTagButton() {
                     >
                       <Badge
                         variant="secondary"
-                        className="font-normal text-black cursor-pointer hover:opacity-80 transition-opacity"
+                        className="font-normal text-foreground cursor-pointer hover:opacity-80 transition-opacity"
                         style={{ backgroundColor: tag.color }}
                       >
                         {tag.name}

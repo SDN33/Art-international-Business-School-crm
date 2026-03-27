@@ -114,7 +114,7 @@ export const ContactListFilter = () => {
               label={
                 <Badge
                   variant="secondary"
-                  className="text-black text-sm md:text-xs font-normal cursor-pointer"
+                  className="text-foreground text-sm md:text-xs font-normal cursor-pointer"
                   style={{
                     backgroundColor: record?.color,
                   }}
@@ -235,7 +235,7 @@ export const ContactListFilterSummary = () => {
             label={
               <Badge
                 variant="secondary"
-                className="text-black text-sm md:text-xs font-normal cursor-pointer"
+                className="text-foreground text-sm md:text-xs font-normal cursor-pointer"
                 style={{
                   backgroundColor: record?.color,
                 }}
