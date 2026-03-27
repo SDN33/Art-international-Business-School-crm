@@ -30,6 +30,24 @@
     <link rel="apple-touch-icon" sizes="1024x1024" href="./appIcon/1024.png" />
     <title>Art International Business School – CRM</title>
 
+    <!-- Apply saved theme synchronously to prevent flash of wrong colors -->
+    <script>
+      (function () {
+        var theme = "light";
+        try {
+          var raw = localStorage.getItem("RaStoreCRM.theme");
+          if (raw) theme = JSON.parse(raw);
+        } catch (e) {}
+        if (
+          theme === "dark" ||
+          (theme === "system" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches)
+        ) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
+
     <style>
       body {
         margin: 0;
