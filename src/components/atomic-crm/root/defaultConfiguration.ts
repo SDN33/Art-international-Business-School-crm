@@ -1,62 +1,63 @@
 import type { ConfigurationContextValue } from "./ConfigurationContext";
 
-export const defaultDarkModeLogo = "./logos/logo_atomic_crm_dark.svg";
-export const defaultLightModeLogo = "./logos/logo_atomic_crm_light.svg";
+export const defaultDarkModeLogo = "./logos/logo_aibs_dark.svg";
+export const defaultLightModeLogo = "./logos/logo_aibs_light.svg";
 
-export const defaultCurrency = "USD";
+export const defaultCurrency = "EUR";
 
-export const defaultTitle = "Atomic CRM";
+export const defaultTitle = "Art International Business School";
 
 export const defaultCompanySectors = [
-  { value: "communication-services", label: "Communication Services" },
-  { value: "consumer-discretionary", label: "Consumer Discretionary" },
-  { value: "consumer-staples", label: "Consumer Staples" },
-  { value: "energy", label: "Energy" },
-  { value: "financials", label: "Financials" },
-  { value: "health-care", label: "Health Care" },
-  { value: "industrials", label: "Industrials" },
-  { value: "information-technology", label: "Information Technology" },
-  { value: "materials", label: "Materials" },
-  { value: "real-estate", label: "Real Estate" },
-  { value: "utilities", label: "Utilities" },
+  { value: "audiovisuel", label: "Audiovisuel" },
+  { value: "cinema", label: "Cinéma" },
+  { value: "musique", label: "Musique" },
+  { value: "theatre", label: "Théâtre" },
+  { value: "doublage-voix", label: "Doublage & Voix" },
+  { value: "production", label: "Production" },
+  { value: "agence-casting", label: "Agence / Casting" },
+  { value: "diffusion", label: "Diffusion & Streaming" },
+  { value: "formation", label: "Formation" },
+  { value: "autre", label: "Autre" },
 ];
 
 export const defaultDealStages = [
-  { value: "opportunity", label: "Opportunity" },
-  { value: "proposal-sent", label: "Proposal Sent" },
-  { value: "in-negociation", label: "In Negotiation" },
-  { value: "won", label: "Won" },
-  { value: "lost", label: "Lost" },
-  { value: "delayed", label: "Delayed" },
+  { value: "prospect", label: "Prospect" },
+  { value: "contact-pris", label: "Contact pris" },
+  { value: "devis-envoye", label: "Devis envoyé" },
+  { value: "en-negociation", label: "En négociation" },
+  { value: "inscrit", label: "Inscrit" },
+  { value: "perdu", label: "Perdu" },
+  { value: "reporte", label: "Reporté" },
 ];
 
-export const defaultDealPipelineStatuses = ["won"];
+export const defaultDealPipelineStatuses = ["inscrit"];
 
 export const defaultDealCategories = [
-  { value: "other", label: "Other" },
-  { value: "copywriting", label: "Copywriting" },
-  { value: "print-project", label: "Print project" },
-  { value: "ui-design", label: "UI Design" },
-  { value: "website-design", label: "Website design" },
+  { value: "autre", label: "Autre" },
+  { value: "acteur-leader", label: "Acteur Leader" },
+  { value: "court-metrage", label: "Court-métrage" },
+  { value: "doublage-voix", label: "Doublage & Voix" },
+  { value: "pro-tools-mixage", label: "Pro Tools & Mixage" },
+  { value: "cannes-networking", label: "Cannes Networking" },
+  { value: "residence-musicale", label: "Résidence Musicale" },
 ];
 
 export const defaultNoteStatuses = [
-  { value: "cold", label: "Cold", color: "#7dbde8" },
-  { value: "warm", label: "Warm", color: "#e8cb7d" },
-  { value: "hot", label: "Hot", color: "#e88b7d" },
-  { value: "in-contract", label: "In Contract", color: "#a4e87d" },
+  { value: "froid", label: "Froid", color: "#7dbde8" },
+  { value: "tiede", label: "Tiède", color: "#e8cb7d" },
+  { value: "chaud", label: "Chaud", color: "#E35D4D" },
+  { value: "inscrit", label: "Inscrit", color: "#a4e87d" },
 ];
 
 export const defaultTaskTypes = [
-  { value: "none", label: "None" },
+  { value: "none", label: "Aucun" },
   { value: "email", label: "Email" },
-  { value: "demo", label: "Demo" },
-  { value: "lunch", label: "Lunch" },
-  { value: "meeting", label: "Meeting" },
-  { value: "follow-up", label: "Follow-up" },
-  { value: "thank-you", label: "Thank you" },
-  { value: "ship", label: "Ship" },
-  { value: "call", label: "Call" },
+  { value: "appel", label: "Appel" },
+  { value: "reunion", label: "Réunion" },
+  { value: "relance", label: "Relance" },
+  { value: "inscription", label: "Inscription" },
+  { value: "suivi", label: "Suivi" },
+  { value: "demo", label: "Présentation" },
 ];
 
 export const defaultConfiguration: ConfigurationContextValue = {
