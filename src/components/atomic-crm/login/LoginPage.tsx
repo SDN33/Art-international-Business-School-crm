@@ -93,10 +93,30 @@ export const LoginPage = (props: { redirectTo?: string }) => {
     <div className="min-h-screen flex">
       <div className="relative grid w-full lg:grid-cols-2">
         <div className="relative hidden h-full flex-col bg-muted p-10 text-white dark:border-r lg:flex">
-          <div className="absolute inset-0" style={{ backgroundColor: "#143D4C" }} />
+          {/* Background image with brand color overlay */}
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: "url('https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=1200&q=80&fit=crop')" }}
+          />
+          <div className="absolute inset-0" style={{ backgroundColor: "#143D4C", opacity: 0.85 }} />
           <div className="relative z-20 flex flex-col h-full">
             <div className="flex items-center gap-3 mb-auto">
               <img className="h-10" src={darkModeLogo} alt={title} />
+            </div>
+            {/* Formations highlights */}
+            <div className="mb-8 space-y-3">
+              <div className="flex items-center gap-2" style={{ color: "#DDD6C4" }}>
+                <span className="text-lg">🎬</span>
+                <span className="text-sm">Acteur Leader · Doublage · Court-métrage</span>
+              </div>
+              <div className="flex items-center gap-2" style={{ color: "#DDD6C4" }}>
+                <span className="text-lg">🎚️</span>
+                <span className="text-sm">Pro Tools · Mixage en studio professionnel</span>
+              </div>
+              <div className="flex items-center gap-2" style={{ color: "#DDD6C4" }}>
+                <span className="text-lg">🎶</span>
+                <span className="text-sm">Créer & lancer son single · Festival de Cannes</span>
+              </div>
             </div>
             <div>
               <blockquote className="space-y-3">
