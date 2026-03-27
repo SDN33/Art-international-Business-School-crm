@@ -1,4 +1,4 @@
-import { Calendar, Clock, MapPin, Users, Euro } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Euro, ExternalLink } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -22,6 +22,8 @@ type Formation = {
   pointsForts: string[];
   financement: string;
   badgeStyle: string;
+  image: string;
+  link?: string;
 };
 
 const formations: Formation[] = [
@@ -34,6 +36,8 @@ const formations: Formation[] = [
     duration: "5 jours intensifs",
     hours: "40h",
     lieu: "Paris (présentiel)",
+    image: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&q=80&fit=crop",
+    link: "https://www.artinternationalbusinessschool.com/",
     description:
       "Plongez au cœur du métier d'acteur avec une formation immersive alliant jeu face caméra, technique de self-tape et stratégie de carrière. Encadrée par des professionnels reconnus du secteur.",
     objectifs: [
@@ -69,6 +73,8 @@ const formations: Formation[] = [
     duration: "9 jours intensifs",
     hours: "72h",
     lieu: "Paris (présentiel)",
+    image: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=600&q=80&fit=crop",
+    link: "https://www.artinternationalbusinessschool.com/",
     description:
       "Concevez, structurez et financez votre court-métrage aux côtés de professionnels de haut niveau, dont un producteur oscarisé. Formation vous accompagnant de l'écriture à la stratégie de financement.",
     objectifs: [
@@ -101,6 +107,8 @@ const formations: Formation[] = [
     duration: "4 jours intensifs",
     hours: "32h",
     lieu: "Paris (présentiel)",
+    image: "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=600&q=80&fit=crop",
+    link: "https://www.artinternationalbusinessschool.com/",
     description:
       "Plongez dans l'univers du doublage professionnel et de la voix-off aux côtés de spécialistes reconnus (cinéma, séries, publicité, documentaire). Apprenez à produire vos enregistrements en toute autonomie.",
     objectifs: [
@@ -135,6 +143,8 @@ const formations: Formation[] = [
     duration: "5 jours intensifs",
     hours: "40h",
     lieu: "Paris (présentiel)",
+    image: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=600&q=80&fit=crop",
+    link: "https://www.artinternationalbusinessschool.com/",
     description:
       "Apprenez à mixer comme un professionnel dans un studio haut de gamme ayant collaboré avec Bigflo et Oli. Développez des compétences techniques immédiatement exploitables.",
     objectifs: [
@@ -167,6 +177,8 @@ const formations: Formation[] = [
     duration: "2 jours intensifs",
     hours: "14h",
     lieu: "Paris (10h–17h)",
+    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&q=80&fit=crop",
+    link: "https://www.artinternationalbusinessschool.com/",
     description:
       "Préparez-vous à exploiter pleinement le potentiel du Festival de Cannes. Comprenez les codes, développez votre posture et apprenez à transformer chaque rencontre en opportunité concrète.",
     objectifs: [
@@ -197,6 +209,8 @@ const formations: Formation[] = [
     duration: "5 jours intensifs",
     hours: "40h",
     lieu: "Résidence à la campagne",
+    image: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=600&q=80&fit=crop",
+    link: "https://www.artinternationalbusinessschool.com/",
     description:
       "Vivez une expérience unique en résidence artistique pour écrire, enregistrer et structurer le lancement de votre single dans un environnement propice à la création.",
     objectifs: [
@@ -224,9 +238,17 @@ const formations: Formation[] = [
 
 export const Formations = () => (
   <div className="flex flex-col gap-4">
-    <h2 className="text-xl font-bold text-foreground">
-      Nos formations 2026
-    </h2>
+    <div className="flex items-center justify-between">
+      <h2 className="text-xl font-bold text-foreground">Nos formations 2026</h2>
+      <a
+        href="https://www.artinternationalbusinessschool.com/"
+        target="_blank"
+        rel="noreferrer"
+        className="text-xs text-primary hover:underline flex items-center gap-1"
+      >
+        Voir toutes les formations <ExternalLink className="h-3 w-3" />
+      </a>
+    </div>
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {formations.map((f) => (
         <FormationCard key={f.id} formation={f} />
@@ -236,15 +258,26 @@ export const Formations = () => (
 );
 
 const FormationCard = ({ formation: f }: { formation: Formation }) => (
-  <Card className="flex flex-col h-full border-border hover:shadow-md transition-shadow">
-    <CardHeader className="pb-3">
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-2xl">{f.emoji}</span>
+  <Card className="flex flex-col h-full border-border hover:shadow-md transition-shadow overflow-hidden">
+    {/* Hero image */}
+    <div className="relative h-36 overflow-hidden bg-muted">
+      <img
+        src={f.image}
+        alt={f.title}
+        className="w-full h-full object-cover"
+        loading="lazy"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+      <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between gap-2">
+        <span className="text-xl">{f.emoji}</span>
         <Badge className="text-white text-xs shrink-0" style={{ backgroundColor: f.badgeStyle }}>
           {f.hours}
         </Badge>
       </div>
-      <CardTitle className="text-base leading-tight mt-2">{f.title}</CardTitle>
+    </div>
+
+    <CardHeader className="pb-3 pt-3">
+      <CardTitle className="text-base leading-tight">{f.title}</CardTitle>
       <p className="text-xs text-muted-foreground">{f.subtitle}</p>
     </CardHeader>
 
@@ -278,7 +311,7 @@ const FormationCard = ({ formation: f }: { formation: Formation }) => (
         <ul className="space-y-0.5">
           {f.objectifs.slice(0, 3).map((o, i) => (
             <li key={i} className="text-xs text-foreground/75 flex gap-1.5">
-              <span className="text-[#E35D4D] shrink-0 mt-0.5">•</span>
+              <span className="text-primary shrink-0 mt-0.5">•</span>
               {o}
             </li>
           ))}
@@ -309,12 +342,22 @@ const FormationCard = ({ formation: f }: { formation: Formation }) => (
         </ul>
       </div>
 
-      {/* Financement */}
-      <div className="mt-auto pt-2 border-t border-border">
+      {/* Financement + CTA */}
+      <div className="mt-auto pt-2 border-t border-border flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Euro className="h-3 w-3 shrink-0" />
           {f.financement}
         </span>
+        {f.link && (
+          <a
+            href={f.link}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-primary hover:underline flex items-center gap-0.5 shrink-0"
+          >
+            S'inscrire <ExternalLink className="h-2.5 w-2.5" />
+          </a>
+        )}
       </div>
     </CardContent>
   </Card>
