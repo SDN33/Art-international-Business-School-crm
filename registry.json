@@ -618,6 +618,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/dashboard/Formations.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/dashboard/DealsPipeline.tsx",
           "type": "registry:component"
         },
