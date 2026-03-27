@@ -93,10 +93,22 @@ export const LoginPage = (props: { redirectTo?: string }) => {
     <div className="min-h-screen flex">
       <div className="relative grid w-full lg:grid-cols-2">
         <div className="relative hidden h-full flex-col bg-muted p-10 text-white dark:border-r lg:flex">
-          <div className="absolute inset-0 bg-zinc-900" />
-          <div className="relative z-20 flex items-center text-lg font-medium">
-            <img className="h-6 mr-2" src={darkModeLogo} alt={title} />
-            {title}
+          <div className="absolute inset-0" style={{ backgroundColor: "#143D4C" }} />
+          <div className="relative z-20 flex flex-col h-full">
+            <div className="flex items-center gap-3 mb-auto">
+              <img className="h-10" src={darkModeLogo} alt={title} />
+            </div>
+            <div>
+              <blockquote className="space-y-3">
+                <p className="text-lg font-light leading-relaxed" style={{ color: "#F2EEE9" }}>
+                  "Former les artistes et professionnels de demain à travers des
+                  formations d'excellence encadrées par des experts du secteur."
+                </p>
+                <footer className="text-sm" style={{ color: "#DDD6C4" }}>
+                  Art International Business School
+                </footer>
+              </blockquote>
+            </div>
           </div>
         </div>
         <div className="flex flex-col justify-center w-full p-4 lg:p-8">
