@@ -1,6 +1,6 @@
 {
-  "short_name": "Atomic CRM",
-  "name": "Atomic CRM",
+  "short_name": "AIBS CRM",
+  "name": "Art International Business School CRM",
   "icons": [
     {
       "src": "favicon.ico",
@@ -69,6 +69,6 @@
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#143D4C",
+  "background_color": "#F2EEE9"
 }

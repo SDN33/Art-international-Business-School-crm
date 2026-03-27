@@ -63,6 +63,7 @@ export default defineConfig({
     preserveSymlinks: true,
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "react-router-dom": "react-router",
     },
   },
 });

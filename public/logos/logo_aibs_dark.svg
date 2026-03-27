@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" fill="none">
+  <!-- Sun/sunrise icon -->
+  <g fill="#E35D4D">
+    <!-- Horizontal base line -->
+    <rect x="2" y="46" width="56" height="3.5" rx="1.75"/>
+    <!-- Semicircle -->
+    <path d="M14 46 A16 16 0 0 1 46 46 Z"/>
+    <!-- Rays rotating around center (30, 46) -->
+    <!-- Ray: straight up 0° -->
+    <rect x="28.75" y="24" width="2.5" height="20" rx="1.25"/>
+    <!-- Rays rotated right -->
+    <rect x="28.75" y="24" width="2.5" height="20" rx="1.25" transform="rotate(20 30 46)"/>
+    <rect x="28.75" y="24" width="2.5" height="20" rx="1.25" transform="rotate(40 30 46)"/>
+    <rect x="28.75" y="24" width="2.5" height="20" rx="1.25" transform="rotate(60 30 46)"/>
+    <rect x="28.75" y="24" width="2.5" height="20" rx="1.25" transform="rotate(80 30 46)"/>
+    <!-- Rays rotated left -->
+    <rect x="28.75" y="24" width="2.5" height="20" rx="1.25" transform="rotate(-20 30 46)"/>
+    <rect x="28.75" y="24" width="2.5" height="20" rx="1.25" transform="rotate(-40 30 46)"/>
+    <rect x="28.75" y="24" width="2.5" height="20" rx="1.25" transform="rotate(-60 30 46)"/>
+    <rect x="28.75" y="24" width="2.5" height="20" rx="1.25" transform="rotate(-80 30 46)"/>
+  </g>
+  <!-- School name text - white for dark mode -->
+  <text x="68" y="28" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700" fill="#F2EEE9" letter-spacing="1">ART INTERNATIONAL</text>
+  <text x="68" y="46" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="400" fill="#F2EEE9" letter-spacing="1">BUSINESS SCHOOL</text>
+</svg>
