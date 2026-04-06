@@ -1,0 +1,244 @@
+{
+  "name": "Meta Leads → AIBS CRM (Supabase) – FIXED",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 15 }]
+        }
+      },
+      "id": "e9afb993-f2c6-4add-b0f7-027a77608923",
+      "name": "Toutes les 15 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [-10096, 2944]
+    },
+    {
+      "parameters": {
+        "jsCode": "const since = Math.floor((Date.now() - 16 * 60 * 1000) / 1000);\nreturn [{ json: { since } }];"
+      },
+      "id": "677a167c-c4b0-4aad-93c6-4562c3554608",
+      "name": "Calcul fenêtre temps",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-9872, 2944]
+    },
+    {
+      "parameters": {
+        "url": "https://graph.facebook.com/v19.0/750136721524800/leadgen_forms",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "access_token", "value": "EAANTSPOSqsoBRO6q9abZCk3qvzDrIs1j69mhkWnqYsnrFgsK7mo3MCGeeRuYC3XelVoOiE0XeYEQUwBZBIyxCQ10k24IZCyu6CQ5MQx7qxYVXTmSiG4ZCo2r4yY34axy7BBC7ae0ghi9c94U4XX8HTPLXTNtdh1jRHbP7KkJvSmrNzfoFBKeZCg6URlDGodPuYzAP1ghx" },
+            { "name": "fields", "value": "id,name,status" },
+            { "name": "limit", "value": "100" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7c45a4aa-3bcb-41f6-bd18-3f7971d6e864",
+      "name": "Récupérer tous les formulaires",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [-9648, 2944]
+    },
+    {
+      "parameters": { "fieldToSplitOut": "data", "options": {} },
+      "id": "f33a89fc-32b1-4f71-8104-ecb0e933e197",
+      "name": "Split formulaires",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [-9424, 2944]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.id }}/leads",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "access_token", "value": "EAANTSPOSqsoBRO6q9abZCk3qvzDrIs1j69mhkWnqYsnrFgsK7mo3MCGeeRuYC3XelVoOiE0XeYEQUwBZBIyxCQ10k24IZCyu6CQ5MQx7qxYVXTmSiG4ZCo2r4yY34axy7BBC7ae0ghi9c94U4XX8HTPLXTNtdh1jRHbP7KkJvSmrNzfoFBKeZCg6URlDGodPuYzAP1ghx" },
+            { "name": "fields", "value": "id,first_name,last_name,email,phone_number,field_data,ad_name,adset_name,campaign_name,created_time,form_id" },
+            { "name": "filtering", "value": "=[{\"field\":\"time_created\",\"operator\":\"GREATER_THAN\",\"value\":\"{{ $('Calcul fenêtre temps').item.json.since }}\"}]" },
+            { "name": "limit", "value": "100" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ce187445-f0db-46e8-9d5c-844af663a660",
+      "name": "Leads par formulaire",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [-9216, 2944]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "leftValue": "={{ $json.data.length }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "214ae4c5-7d48-4d67-a0c4-e323160d20b2",
+      "name": "A des leads ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-8992, 2944]
+    },
+    {
+      "parameters": { "fieldToSplitOut": "data", "options": {} },
+      "id": "4b8864be-6ee9-4099-b0f1-aaf88e337d0a",
+      "name": "Split leads",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [-8768, 2832]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $input.first().json;\nconst formName = $('Split formulaires').item.json.name || '';\n\n// Extract field_data\nconst fields = {};\nfor (const f of lead.field_data ?? []) {\n  const key = (f.name || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/\\s+/g, '_');\n  fields[key] = f.values?.[0] ?? '';\n  fields[f.name] = f.values?.[0] ?? '';\n}\n\n// Resolve formation from form name\nfunction inferFormationSlug(raw) {\n  if (!raw) return null;\n  const s = raw.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n  if (/doublage|voix.?off/.test(s)) return 'doublage-voix';\n  if (/court.?m[ee]trage|oscarise/.test(s)) return 'court-metrage';\n  if (/pro.?tools|mixage/.test(s)) return 'pro-tools-mixage';\n  if (/cannes/.test(s)) return 'strategie-cannes';\n  if (/residence/.test(s)) return 'residence-artistique';\n  if (/acteur|leader|casting/.test(s)) return 'acteur-leader';\n  return null;\n}\n\nconst rawFormation = formName || fields['formation_souhaitee'] || fields['formation'] || fields['programme'] || '';\nconst formationSlug = inferFormationSlug(rawFormation);\nconst formationName = rawFormation.trim();\n\n// Handle full_name\nlet splitFirst = '', splitLast = '';\nconst fullName = fields['full_name'] || fields['nom_complet'] || fields['name'] || '';\nif (fullName) {\n  const parts = fullName.trim().split(/\\s+/);\n  splitFirst = parts[0] || '';\n  splitLast = parts.slice(1).join(' ') || parts[0] || '';\n}\n\nconst firstName = lead.first_name || fields['first_name'] || fields['prenom'] || splitFirst || '';\nconst lastName  = lead.last_name  || fields['last_name']  || fields['nom']    || splitLast  || '';\nconst email     = lead.email      || fields['email']      || fields['e-mail'] || fields['mail'] || '';\nconst phone     = fields['phone_number'] || fields['telephone'] || fields['mobile'] || lead.phone_number || '';\n\nreturn [{\n  json: {\n    metaLeadId: lead.id,\n    firstName,\n    lastName,\n    email,\n    phone,\n    formationName,\n    formationSlug,\n    message: fields['message'] || fields['commentaire'] || fields['comment'] || '',\n    utmCampaign: lead.campaign_name || fields['campaign_name'] || '',\n    utmMedium: 'paid_social',\n    utmSource: 'facebook',\n  }\n}];"
+      },
+      "id": "9dac1a1b-12b0-4780-a0ff-e7c9787999ce",
+      "name": "Mapper les champs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-8544, 2832]
+    },
+    {
+      "parameters": {
+        "url": "https://lmlehskymbrqxqoepuuk.supabase.co/rest/v1/contacts",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "or", "value": "=(meta_lead_id.eq.{{ $json.metaLeadId }},email_jsonb.cs.[{\"email\":\"{{ $json.email }}\"}])" },
+            { "name": "select", "value": "id,meta_lead_id" },
+            { "name": "limit", "value": "1" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b56fa893-5a7e-430a-af7e-7465a6072e32",
+      "name": "Vérifier doublon",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [-8336, 2832]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "check-duplicate",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "exists" }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "77ca033a-cb58-49ec-911e-41a4bb89648c",
+      "name": "Est un doublon ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-8112, 2832]
+    },
+    {
+      "parameters": {
+        "jsCode": "const email = $('Mapper les champs').item.json.email;\nconsole.log('⏭️  Doublon ignoré – email déjà en base:', email);\nreturn [];"
+      },
+      "id": "45034c86-cc88-484b-82f4-ceb68232db0d",
+      "name": "Log doublon ignoré",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-7888, 2960]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lmlehskymbrqxqoepuuk.supabase.co/rest/v1/contacts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=representation" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  first_name: $('Mapper les champs').item.json.firstName,\n  last_name: $('Mapper les champs').item.json.lastName,\n  email_jsonb: [{ email: $('Mapper les champs').item.json.email }],\n  phone_jsonb: $('Mapper les champs').item.json.phone ? [{ number: $('Mapper les champs').item.json.phone, label: 'mobile' }] : null,\n  status: 'lead',\n  pipeline_status: 'Nouveau lead',\n  origine_lead: 'Meta Lead Ads',\n  formation_souhaitee: $('Mapper les champs').item.json.formationName || null,\n  formation_slug: $('Mapper les champs').item.json.formationSlug || null,\n  utm_source: $('Mapper les champs').item.json.utmSource,\n  utm_medium: $('Mapper les champs').item.json.utmMedium,\n  utm_campaign: $('Mapper les champs').item.json.utmCampaign || null,\n  meta_lead_id: $('Mapper les champs').item.json.metaLeadId,\n  background: $('Mapper les champs').item.json.message || null,\n  first_seen: new Date().toISOString(),\n  last_seen: new Date().toISOString()\n}) }}",
+        "options": {}
+      },
+      "id": "4af5a95e-0cd4-48b0-9378-7b02aff4ccd9",
+      "name": "POST → Supabase contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [-7888, 2752]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "leftValue": "={{ $json[0]?.id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "exists" }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "98ee8519-005e-45af-9d74-52e8a608b0e8",
+      "name": "Lead créé ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-7664, 2752]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst record = Array.isArray(item.json) ? item.json[0] : item.json;\nconsole.log('✅ Lead créé dans Supabase:', record?.id, record?.first_name, record?.last_name);\nreturn [{ json: record }];"
+      },
+      "id": "54db5fbb-ae90-4fb9-b8ec-807501dfc890",
+      "name": "Log résultat",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-7440, 2752]
+    }
+  ],
+  "connections": {
+    "Toutes les 15 min": { "main": [[{ "node": "Calcul fenêtre temps", "type": "main", "index": 0 }]] },
+    "Calcul fenêtre temps": { "main": [[{ "node": "Récupérer tous les formulaires", "type": "main", "index": 0 }]] },
+    "Récupérer tous les formulaires": { "main": [[{ "node": "Split formulaires", "type": "main", "index": 0 }]] },
+    "Split formulaires": { "main": [[{ "node": "Leads par formulaire", "type": "main", "index": 0 }]] },
+    "Leads par formulaire": { "main": [[{ "node": "A des leads ?", "type": "main", "index": 0 }]] },
+    "A des leads ?": { "main": [[{ "node": "Split leads", "type": "main", "index": 0 }]] },
+    "Split leads": { "main": [[{ "node": "Mapper les champs", "type": "main", "index": 0 }]] },
+    "Mapper les champs": { "main": [[{ "node": "Vérifier doublon", "type": "main", "index": 0 }]] },
+    "Vérifier doublon": { "main": [[{ "node": "Est un doublon ?", "type": "main", "index": 0 }]] },
+    "Est un doublon ?": { "main": [[{ "node": "Log doublon ignoré", "type": "main", "index": 0 }], [{ "node": "POST → Supabase contacts", "type": "main", "index": 0 }]] },
+    "POST → Supabase contacts": { "main": [[{ "node": "Lead créé ?", "type": "main", "index": 0 }]] },
+    "Lead créé ?": { "main": [[{ "node": "Log résultat", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

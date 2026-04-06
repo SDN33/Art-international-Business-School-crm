@@ -23,6 +23,17 @@ import type { Contact } from "../types";
 import { Avatar } from "./Avatar";
 import { TagsList } from "./TagsList";
 
+const PIPELINE_STATUS_COLORS: Record<string, string> = {
+  "Nouveau lead": "bg-purple-100 text-purple-700",
+  "Contacté WA": "bg-teal-100 text-teal-700",
+  "À rappeler": "bg-amber-100 text-amber-700",
+  Qualifié: "bg-indigo-100 text-indigo-700",
+  "Qualifié AFDAS": "bg-emerald-100 text-emerald-700",
+  Inscrit: "bg-green-100 text-green-700",
+  Converti: "bg-green-200 text-green-800",
+  Perdu: "bg-red-100 text-red-700",
+};
+
 export const ContactListContent = () => {
   const translate = useTranslate();
   const {
@@ -128,34 +139,46 @@ const ContactItemContent = ({
       >
         <Avatar />
         <div className="flex-1 min-w-0">
-          <div className="font-medium">
-            {`${contact.first_name} ${contact.last_name ?? ""}`}
+          <div className="flex items-center gap-2">
+            <span className="font-medium">
+              {`${contact.first_name} ${contact.last_name ?? ""}`}
+            </span>
+            {contact.pipeline_status && (
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium leading-none ${PIPELINE_STATUS_COLORS[contact.pipeline_status] ?? "bg-gray-100 text-gray-700"}`}
+              >
+                {contact.pipeline_status}
+              </span>
+            )}
           </div>
-          {contact.title || contact.company_id != null || contact.nb_tasks ? (
-            <div className="text-sm text-muted-foreground">
-              {contact.title && contact.company_id != null
-                ? `${translate("resources.contacts.position_at", {
-                    title: contact.title,
-                  })} `
-                : contact.title}
-              {contact.company_id != null && (
-                <ReferenceField
-                  source="company_id"
-                  reference="companies"
-                  link={false}
-                >
-                  <TextField source="name" />
-                </ReferenceField>
-              )}
-              {contact.nb_tasks
-                ? ` - ${translate("crm.common.task_count", {
-                    smart_count: contact.nb_tasks,
-                  })}`
-                : ""}
-              &nbsp;&nbsp;
-              <TagsList />
-            </div>
-          ) : null}
+          <div className="text-sm text-muted-foreground">
+            {contact.title && contact.company_id != null
+              ? `${translate("resources.contacts.position_at", {
+                  title: contact.title,
+                })} `
+              : contact.title}
+            {contact.company_id != null && (
+              <ReferenceField
+                source="company_id"
+                reference="companies"
+                link={false}
+              >
+                <TextField source="name" />
+              </ReferenceField>
+            )}
+            {contact.formation_souhaitee && (
+              <span className="ml-2 text-xs bg-secondary px-1.5 py-0.5 rounded">
+                {contact.formation_souhaitee}
+              </span>
+            )}
+            {contact.nb_tasks
+              ? ` - ${translate("crm.common.task_count", {
+                  smart_count: contact.nb_tasks,
+                })}`
+              : ""}
+            &nbsp;&nbsp;
+            <TagsList />
+          </div>
         </div>
         {contact.last_seen && (
           <div className="text-right ml-4">

@@ -9,6 +9,7 @@ import { TasksIterator } from "../tasks/TasksIterator";
 import { TagsListEdit } from "./TagsListEdit";
 import { ContactPersonalInfo } from "./ContactPersonalInfo";
 import { ContactBackgroundInfo } from "./ContactBackgroundInfo";
+import { ContactLeadInfo } from "./ContactLeadInfo";
 import { AsideSection } from "../misc/AsideSection";
 import type { Contact } from "../types";
 import { ContactMergeButton } from "./ContactMergeButton";
@@ -33,6 +34,10 @@ export const ContactAside = ({ link = "edit" }: { link?: "edit" | "show" }) => {
         title={translate("resources.contacts.field_categories.personal_info")}
       >
         <ContactPersonalInfo />
+      </AsideSection>
+
+      <AsideSection title="Informations Lead">
+        <ContactLeadInfo />
       </AsideSection>
 
       <AsideSection

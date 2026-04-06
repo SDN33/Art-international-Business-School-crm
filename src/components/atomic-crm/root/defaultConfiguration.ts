@@ -21,13 +21,14 @@ export const defaultCompanySectors = [
 ];
 
 export const defaultDealStages = [
-  { value: "prospect", label: "Prospect" },
-  { value: "contact-pris", label: "Contact pris" },
-  { value: "devis-envoye", label: "Devis envoyé" },
-  { value: "en-negociation", label: "En négociation" },
+  { value: "nouveau-lead", label: "Nouveau lead" },
+  { value: "contacte-wa", label: "Contacté WA" },
+  { value: "a-rappeler", label: "À rappeler" },
+  { value: "qualifie", label: "Qualifié" },
+  { value: "qualifie-afdas", label: "Qualifié AFDAS" },
   { value: "inscrit", label: "Inscrit" },
+  { value: "converti", label: "Converti" },
   { value: "perdu", label: "Perdu" },
-  { value: "reporte", label: "Reporté" },
 ];
 
 export const defaultDealPipelineStatuses = ["inscrit"];

@@ -436,3 +436,159 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION "public"."update_contacts_updated_at"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION "public"."auto_advance_pipeline_status"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  -- When reponse_relance_wa changes to true and contact is "Nouveau lead"
+  -- → advance to "Contacté WA"
+  IF NEW.reponse_relance_wa IS TRUE
+     AND (OLD.reponse_relance_wa IS DISTINCT FROM TRUE)
+     AND NEW.pipeline_status = 'Nouveau lead'
+  THEN
+    NEW.pipeline_status := 'Contacté WA';
+  END IF;
+
+  -- Sync the corresponding deal stage when pipeline_status changed
+  IF NEW.pipeline_status IS DISTINCT FROM OLD.pipeline_status THEN
+    UPDATE public.deals
+    SET stage = CASE NEW.pipeline_status
+      WHEN 'Nouveau lead'    THEN 'nouveau-lead'
+      WHEN 'Contacté WA'     THEN 'contacte-wa'
+      WHEN 'À rappeler'      THEN 'a-rappeler'
+      WHEN 'Qualifié'        THEN 'qualifie'
+      WHEN 'Qualifié AFDAS'  THEN 'qualifie-afdas'
+      WHEN 'Inscrit'         THEN 'inscrit'
+      WHEN 'Converti'        THEN 'converti'
+      WHEN 'Perdu'           THEN 'perdu'
+      ELSE lower(regexp_replace(NEW.pipeline_status, '[^a-zA-Z0-9]+', '-', 'g'))
+    END
+    WHERE NEW.id = ANY(contact_ids);
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION "public"."auto_pipeline_from_note"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  note_lower text;
+  current_status text;
+  target_status text := NULL;
+  current_rank int;
+  target_rank int;
+BEGIN
+  IF NEW.text IS NULL OR NEW.text = '' THEN
+    RETURN NEW;
+  END IF;
+
+  note_lower := lower(NEW.text);
+
+  SELECT pipeline_status INTO current_status
+  FROM public.contacts
+  WHERE id = NEW.contact_id;
+
+  -- If the note mentions WhatsApp/bot, also flag the contact as relancé
+  IF note_lower ~ '(bot wa|whatsapp|envoi wa|message wa|contact. wa)' THEN
+    UPDATE public.contacts
+    SET reponse_relance_wa = true
+    WHERE id = NEW.contact_id AND reponse_relance_wa = false;
+  END IF;
+
+  -- Detect target status from keywords (most specific first)
+  -- Note: "À rappeler" patterns are checked BEFORE "Perdu" to avoid
+  -- sending "pas disponible avant juin" leads to Perdu
+  IF note_lower ~ '(converti|paiement|confirm. l.inscription|a pay|r.glement)' THEN
+    target_status := 'Converti';
+  ELSIF note_lower ~ '(inscrit|inscription confirm|rdv confirm|calendly confirm|a r.serv)' THEN
+    target_status := 'Inscrit';
+  ELSIF note_lower ~ '(afdas|.ligible afdas|dossier afdas|prise en charge)' THEN
+    target_status := E'Qualifi\u00e9 AFDAS';
+  ELSIF note_lower ~ '(qualifi.|int.ress. par|veut s.inscrire|motivation confirm|demande d.info|envoi programme|brochure envoy)' THEN
+    target_status := E'Qualifi\u00e9';
+  ELSIF note_lower ~ '(recontact|rappeler|relancer|pas disponible avant|demande .tre recontact|rappel plus tard|absent|messagerie|pas disponible)' THEN
+    target_status := E'\u00c0 rappeler';
+  ELSIF note_lower ~ '(refus|pas int.ress|ne r.pond plus|conversation termin|ne souhaite|d.clin|annul|faux num)' THEN
+    target_status := 'Perdu';
+  ELSIF note_lower ~ '(contact. wa|whatsapp|bot wa|envoi wa|message wa)' THEN
+    target_status := E'Contact\u00e9 WA';
+  END IF;
+
+  IF target_status IS NULL OR current_status = target_status THEN
+    RETURN NEW;
+  END IF;
+
+  current_rank := CASE current_status
+    WHEN 'Nouveau lead' THEN 1 WHEN E'Contact\u00e9 WA' THEN 2
+    WHEN E'\u00c0 rappeler' THEN 3 WHEN E'Qualifi\u00e9' THEN 4
+    WHEN E'Qualifi\u00e9 AFDAS' THEN 5 WHEN 'Inscrit' THEN 6
+    WHEN 'Converti' THEN 7 WHEN 'Perdu' THEN 0 ELSE 0 END;
+
+  target_rank := CASE target_status
+    WHEN 'Nouveau lead' THEN 1 WHEN E'Contact\u00e9 WA' THEN 2
+    WHEN E'\u00c0 rappeler' THEN 3 WHEN E'Qualifi\u00e9' THEN 4
+    WHEN E'Qualifi\u00e9 AFDAS' THEN 5 WHEN 'Inscrit' THEN 6
+    WHEN 'Converti' THEN 7 WHEN 'Perdu' THEN 99 ELSE 0 END;
+
+  -- Only advance or go to Perdu, never go backwards
+  IF target_rank <= current_rank THEN
+    RETURN NEW;
+  END IF;
+
+  UPDATE public.contacts
+  SET pipeline_status = target_status
+  WHERE id = NEW.contact_id;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION "public"."auto_create_deal_on_contact"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  deal_stage text;
+  deal_name text;
+BEGIN
+  -- Map pipeline_status (French label) → deal stage (slug)
+  deal_stage := CASE NEW.pipeline_status
+    WHEN 'Nouveau lead'    THEN 'nouveau-lead'
+    WHEN 'Contacté WA'     THEN 'contacte-wa'
+    WHEN 'À rappeler'      THEN 'a-rappeler'
+    WHEN 'Qualifié'        THEN 'qualifie'
+    WHEN 'Qualifié AFDAS'  THEN 'qualifie-afdas'
+    WHEN 'Inscrit'         THEN 'inscrit'
+    WHEN 'Converti'        THEN 'converti'
+    WHEN 'Perdu'           THEN 'perdu'
+    ELSE 'nouveau-lead'
+  END;
+
+  deal_name := TRIM(COALESCE(NEW.first_name, '') || ' ' || COALESCE(NEW.last_name, ''));
+  IF deal_name = '' THEN
+    deal_name := 'Lead #' || NEW.id::text;
+  END IF;
+
+  INSERT INTO public.deals (
+    name, contact_ids, stage, formation_souhaitee, sales_id, index, created_at, updated_at
+  ) VALUES (
+    deal_name, ARRAY[NEW.id], deal_stage, NEW.formation_souhaitee, NEW.sales_id, 0, NOW(), NOW()
+  );
+
+  RETURN NEW;
+END;
+$$;

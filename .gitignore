@@ -18,6 +18,8 @@ __screenshots__
 # misc
 .DS_Store
 .env.local
+.env.development
+.env.e2e
 .env.production
 .env.development.local
 .env.test.local

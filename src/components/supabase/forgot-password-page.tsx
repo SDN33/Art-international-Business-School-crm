@@ -28,6 +28,7 @@ export const ForgotPasswordPage = () => {
       setLoading(true);
       await resetPassword({
         email: values.email,
+        redirectTo: `${window.location.origin}/auth-callback.html`,
       });
     } catch (error: any) {
       notify(

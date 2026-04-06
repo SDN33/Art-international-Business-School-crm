@@ -4,6 +4,7 @@ import { useDataProvider, useListContext, type DataProvider } from "ra-core";
 import { useEffect, useState } from "react";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
+import { syncContactsFromDealStage } from "../pipeline/syncPipelineStatus";
 import type { Deal } from "../types";
 import { DealColumn } from "./DealColumn";
 import type { DealsByStage } from "./stages";
@@ -20,6 +21,7 @@ export const DealListContent = () => {
 
   useEffect(() => {
     if (unorderedDeals) {
+      console.log(`[DealListContent] Received ${unorderedDeals.length} deals from API`);
       const newDealsByStage = getDealsByStage(unorderedDeals, dealStages);
       if (!isEqual(newDealsByStage, dealsByStage)) {
         setDealsByStage(newDealsByStage);
@@ -66,13 +68,17 @@ export const DealListContent = () => {
 
     // persist the changes
     updateDealStage(sourceDeal, destinationDeal, dataProvider).then(() => {
+      // Sync contacts' pipeline_status when deal moves across stages
+      if (sourceStage !== destinationStage) {
+        syncContactsFromDealStage(sourceDeal, destinationStage, dataProvider);
+      }
       refetch();
     });
   };
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex gap-4">
+      <div className="flex gap-4 overflow-x-auto pb-16 md:pb-2">
         {dealStages.map((stage) => (
           <DealColumn
             stage={stage.value}

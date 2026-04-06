@@ -118,24 +118,58 @@
         </div>
     </body>
     <script>
-        const getUrlParams = () => {
-            const urlSearchParams = new URLSearchParams(
-                window.location.hash.substring(1)
-            );
-            const access_token = urlSearchParams.get('access_token');
-            const refresh_token = urlSearchParams.get('refresh_token');
-            const type = urlSearchParams.get('type');
-
-            return { access_token, refresh_token, type };
-        };
+        function getUrlParams() {
+            // Try hash fragment first (implicit flow)
+            var source = window.location.hash.substring(1);
+            // Fall back to query string (PKCE flow)
+            if (!source || source === '') {
+                source = window.location.search.substring(1);
+            }
+            var params = new URLSearchParams(source);
+            return {
+                access_token: params.get('access_token'),
+                refresh_token: params.get('refresh_token'),
+                type: params.get('type'),
+                error: params.get('error'),
+                error_description: params.get('error_description'),
+                error_code: params.get('error_code'),
+                code: params.get('code')
+            };
+        }
 
         function interceptAuthCallback() {
-                const hash = window.location.hash;
-                const {access_token, refresh_token, type} = getUrlParams();
-                window.location.href = `./#/auth-callback?access_token=${access_token}&refresh_token=${refresh_token}&type=${type}`;
+            var p = getUrlParams();
+
+            // Handle errors from Supabase (e.g. expired token)
+            if (p.error) {
+                var msg = decodeURIComponent(p.error_description || p.error || 'Unknown error');
+                document.getElementById('root').innerHTML =
+                    '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;flex-direction:column;padding:20px;text-align:center">' +
+                    '<h2 style="color:#dc2626">Erreur d\'authentification</h2>' +
+                    '<p>' + msg + '</p>' +
+                    '<a href="./#/forgot-password" style="margin-top:16px;color:#2563eb;text-decoration:underline">Demander un nouveau lien</a>' +
+                    '</div>';
+                return;
+            }
+
+            // Handle PKCE flow (code in query string)
+            if (p.code) {
+                window.location.href = './#/auth-callback?code=' + encodeURIComponent(p.code);
+                return;
+            }
+
+            // Handle implicit flow (tokens in hash)
+            if (p.access_token && p.refresh_token && p.type) {
+                window.location.href = './#/auth-callback?access_token=' + encodeURIComponent(p.access_token) +
+                    '&refresh_token=' + encodeURIComponent(p.refresh_token) +
+                    '&type=' + encodeURIComponent(p.type);
+                return;
+            }
+
+            // No tokens and no error — redirect to login
+            window.location.href = './#/login';
         }
-    
-        // Call the function to intercept the auth callback
+
         interceptAuthCallback();
     </script>
 </html>

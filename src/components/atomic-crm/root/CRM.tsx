@@ -20,6 +20,15 @@ import contacts from "../contacts";
 import { Dashboard } from "../dashboard/Dashboard";
 import { MobileDashboard } from "../dashboard/MobileDashboard";
 import deals from "../deals";
+import formations from "../formations";
+import SessionList from "../formations/SessionList";
+import IntervenantList from "../formations/IntervenantList";
+import { LeadsListPage } from "../pipeline/LeadsListPage";
+import { InteractionList } from "../pipeline/InteractionList";
+import { NewsletterList } from "../pipeline/NewsletterList";
+import { PaiementList } from "../suivi/PaiementList";
+import { TasksKanbanPage } from "../suivi/TasksKanbanPage";
+import { DocumentList } from "../documents/DocumentList";
 import { Layout } from "../layout/Layout";
 import { MobileLayout } from "../layout/MobileLayout";
 import { SignupPage } from "../login/SignupPage";
@@ -146,24 +155,23 @@ export const CRM = ({
     img.src = `https://atomic-crm-telemetry.marmelab.com/atomic-crm-telemetry?domain=${window.location.hostname}`;
   }, [disableTelemetry]);
 
-  // Seed the store with CRM prop values if not already stored
-  // (backwards compatibility for prop-based config)
-  if (!store.getItem(CONFIGURATION_STORE_KEY)) {
-    store.setItem(CONFIGURATION_STORE_KEY, {
-      companySectors,
-      currency,
-      dealCategories,
-      dealPipelineStatuses,
-      dealStages,
-      noteStatuses,
-      taskTypes,
-      title,
-      darkModeLogo,
-      lightModeLogo,
-      googleWorkplaceDomain,
-      disableEmailPasswordAuthentication,
-    } satisfies ConfigurationContextValue);
-  }
+  // Always seed the store with prop-based defaults.
+  // The DB configuration (loaded by useConfigurationLoader) will override
+  // these values when it arrives, giving DB config precedence.
+  store.setItem(CONFIGURATION_STORE_KEY, {
+    companySectors,
+    currency,
+    dealCategories,
+    dealPipelineStatuses,
+    dealStages,
+    noteStatuses,
+    taskTypes,
+    title,
+    darkModeLogo,
+    lightModeLogo,
+    googleWorkplaceDomain,
+    disableEmailPasswordAuthentication,
+  } satisfies ConfigurationContextValue);
 
   const isMobile = useIsMobile();
 
@@ -259,6 +267,12 @@ const DesktopAdmin = (
         <Route path={ProfilePage.path} element={<ProfilePage />} />
         <Route path={SettingsPage.path} element={<SettingsPage />} />
         <Route path={ImportPage.path} element={<ImportPage />} />
+        <Route path="/leads-liste" element={<LeadsListPage />} />
+        <Route path="/interactions" element={<InteractionList />} />
+        <Route path="/newsletter_subscribers" element={<NewsletterList />} />
+        <Route path="/paiements" element={<PaiementList />} />
+        <Route path="/taches" element={<TasksKanbanPage />} />
+        <Route path="/documents" element={<DocumentList />} />
       </CustomRoutes>
       <Resource name="deals" {...deals} />
       <Resource name="contacts" {...contacts} />
@@ -268,6 +282,10 @@ const DesktopAdmin = (
       <Resource name="tasks" />
       <Resource name="sales" {...sales} />
       <Resource name="tags" />
+      <Resource name="formations" {...formations} />
+      <Resource name="training_sessions" list={SessionList} />
+      <Resource name="intervenants" list={IntervenantList} />
+      <Resource name="documents" />
     </Admin>
   );
 };

@@ -26,6 +26,7 @@ import { ContactEditSheet } from "./ContactEditSheet";
 import { TagsListEdit } from "./TagsListEdit";
 import { ContactPersonalInfo } from "./ContactPersonalInfo";
 import { ContactBackgroundInfo } from "./ContactBackgroundInfo";
+import { ContactLeadInfo } from "./ContactLeadInfo";
 import { ContactTasksList } from "./ContactTasksList";
 import type { Contact } from "../types";
 import { Avatar } from "./Avatar";
@@ -196,6 +197,15 @@ const ContactShowContentMobile = () => {
                 <Separator />
                 <div className="mt-3">
                   <ContactPersonalInfo />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">
+                  Informations Lead
+                </h3>
+                <Separator />
+                <div className="mt-3">
+                  <ContactLeadInfo />
                 </div>
               </div>
               <div>

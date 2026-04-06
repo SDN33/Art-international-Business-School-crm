@@ -100,6 +100,21 @@ export type Contact = {
   phone_jsonb: PhoneNumberAndType[];
   nb_tasks?: number;
   company_name?: string;
+  pipeline_status?: string | null;
+  origine_lead?: string | null;
+  formation_souhaitee?: string | null;
+  formation_slug?: string | null;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  calendly_reserved?: boolean;
+  qualification_bot?: boolean;
+  reponse_relance_email?: boolean;
+  reponse_relance_wa?: boolean;
+  indice_no_show?: number;
+  lien_calendly?: string | null;
+  valeur_estimee?: number | null;
+  converted_at?: string | null;
 } & Pick<RaRecord, "id">;
 
 export type ContactNote = {
@@ -125,6 +140,7 @@ export type Deal = {
   expected_closing_date: string;
   sales_id: Identifier;
   index: number;
+  formation_souhaitee?: string;
 } & Pick<RaRecord, "id">;
 
 export type DealNote = {
@@ -226,3 +242,16 @@ export interface ContactGender {
   label: string;
   icon: ComponentType<{ className?: string }>;
 }
+
+export type Document = {
+  title: string;
+  type_document: string;
+  file_url: string | null;
+  file_name: string | null;
+  statut: string;
+  notes: string | null;
+  contact_id: Identifier | null;
+  sales_id: Identifier | null;
+  created_at: string;
+  updated_at: string | null;
+} & Pick<RaRecord, "id">;

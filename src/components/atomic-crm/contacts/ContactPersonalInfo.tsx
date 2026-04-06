@@ -136,7 +136,7 @@ const PersonalInfoRow = ({
         {showType ? (
           <WithRecord
             render={(row) =>
-              row.type !== "Other" && (
+              row.type && row.type !== "Other" && (
                 <span className="text-muted-foreground">
                   {translatePersonalInfoTypeLabel(row.type, translate)}
                 </span>
