@@ -1,0 +1,143 @@
+{
+  "name": "AIBS CRM → Meta Lead Status Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 5 }]
+        }
+      },
+      "id": "sync-trigger-001",
+      "name": "Toutes les 5 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [-1200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fenêtre de 6 minutes (avec marge de sécurité)\nconst since = new Date(Date.now() - 6 * 60 * 1000).toISOString();\nreturn [{ json: { since } }];"
+      },
+      "id": "sync-time-001",
+      "name": "Calcul fenêtre temps",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-980, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://lmlehskymbrqxqoepuuk.supabase.co/rest/v1/contacts",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "meta_lead_id", "value": "not.is.null" },
+            { "name": "updated_at", "value": "=gte.{{ $json.since }}" },
+            { "name": "pipeline_status", "value": "not.is.null" },
+            { "name": "select", "value": "id,meta_lead_id,pipeline_status,first_name,last_name" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "sync-fetch-001",
+      "name": "Contacts modifiés récemment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [-760, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "leftValue": "={{ $json.length ?? Object.keys($json).length }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "sync-check-001",
+      "name": "Des contacts modifiés ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-540, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Si la réponse est un array, le splitter\nconst items = $input.all();\nconst results = [];\nfor (const item of items) {\n  if (Array.isArray(item.json)) {\n    for (const contact of item.json) {\n      results.push({ json: contact });\n    }\n  } else if (item.json.id) {\n    results.push(item);\n  }\n}\nreturn results;"
+      },
+      "id": "sync-split-001",
+      "name": "Split contacts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-320, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const contact = $input.first().json;\n\n// Mapping CRM pipeline_status → Meta CRM status (8 stages)\nconst STATUS_MAP = {\n  'Nouveau lead': 'NEW',\n  'Contacté WA': 'CONTACTED',\n  'À rappeler': 'CONTACTED',\n  'Qualifié': 'QUALIFIED',\n  'Qualifié AFDAS': 'QUALIFIED',\n  'Inscrit': 'CONVERTED',\n  'Converti': 'CONVERTED',\n  'Perdu': 'DISQUALIFIED',\n};\n\nconst metaStatus = STATUS_MAP[contact.pipeline_status] || null;\n\nif (!metaStatus) {\n  console.log('⏭️  Statut CRM non mappé:', contact.pipeline_status);\n  return [];\n}\n\nreturn [{\n  json: {\n    contactId: contact.id,\n    metaLeadId: contact.meta_lead_id,\n    crmStatus: contact.pipeline_status,\n    metaStatus,\n    name: (contact.first_name || '') + ' ' + (contact.last_name || '')\n  }\n}];"
+      },
+      "id": "sync-map-001",
+      "name": "Mapper statut CRM → Meta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-100, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.metaLeadId }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "access_token", "value": "EAANTSPOSqsoBRO6q9abZCk3qvzDrIs1j69mhkWnqYsnrFgsK7mo3MCGeeRuYC3XelVoOiE0XeYEQUwBZBIyxCQ10k24IZCyu6CQ5MQx7qxYVXTmSiG4ZCo2r4yY34axy7BBC7ae0ghi9c94U4XX8HTPLXTNtdh1jRHbP7KkJvSmrNzfoFBKeZCg6URlDGodPuYzAP1ghx" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: $json.metaStatus }) }}",
+        "options": {
+          "response": { "response": { "fullResponse": true } }
+        }
+      },
+      "id": "sync-push-001",
+      "name": "PUT status → Meta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [120, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Mapper statut CRM → Meta').item.json;\nconst result = $input.first().json;\nconst success = result?.body?.success || result?.success;\n\nif (success) {\n  console.log(`✅ Meta sync OK: ${prev.name} → ${prev.metaStatus} (lead: ${prev.metaLeadId})`);\n} else {\n  console.log(`❌ Meta sync ERREUR: ${prev.name}, lead ${prev.metaLeadId}`, JSON.stringify(result?.body || result));\n}\n\nreturn [{ json: { ...prev, metaSyncSuccess: !!success, metaResponse: result?.body || result } }];"
+      },
+      "id": "sync-log-001",
+      "name": "Log résultat sync",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [340, 200]
+    }
+  ],
+  "connections": {
+    "Toutes les 5 min": { "main": [[{ "node": "Calcul fenêtre temps", "type": "main", "index": 0 }]] },
+    "Calcul fenêtre temps": { "main": [[{ "node": "Contacts modifiés récemment", "type": "main", "index": 0 }]] },
+    "Contacts modifiés récemment": { "main": [[{ "node": "Des contacts modifiés ?", "type": "main", "index": 0 }]] },
+    "Des contacts modifiés ?": { "main": [[{ "node": "Split contacts", "type": "main", "index": 0 }]] },
+    "Split contacts": { "main": [[{ "node": "Mapper statut CRM → Meta", "type": "main", "index": 0 }]] },
+    "Mapper statut CRM → Meta": { "main": [[{ "node": "PUT status → Meta", "type": "main", "index": 0 }]] },
+    "PUT status → Meta": { "main": [[{ "node": "Log résultat sync", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

@@ -1,6 +1,15 @@
 import { useMutation } from "@tanstack/react-query";
 import { isValid } from "date-fns";
-import { Archive, ArchiveRestore } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  Calendar,
+  DollarSign,
+  FolderKanban,
+  Tag,
+  Users,
+  FileText,
+} from "lucide-react";
 import {
   ShowBase,
   useDataProvider,
@@ -18,6 +27,7 @@ import { ReferenceField } from "@/components/admin/reference-field";
 import { ReferenceManyField } from "@/components/admin/reference-many-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 
@@ -54,129 +64,184 @@ const DealShowContent = () => {
   const record = useRecordContext<Deal>();
   if (!record) return null;
 
+  const stageLabel = findDealLabel(dealStages, record.stage);
+  const categoryLabel =
+    dealCategories.find((c) => c.value === record.category)?.label ??
+    record.category;
+
   return (
     <>
-      <div className="space-y-2">
+      <div className="space-y-4">
         {record.archived_at ? <ArchivedTitle /> : null}
-        <div className="flex-1">
-          <div className="flex justify-between items-start mb-8">
-            <div className="flex items-center gap-4">
-              <ReferenceField
-                source="company_id"
-                reference="companies"
-                link="show"
-              >
-                <CompanyAvatar />
-              </ReferenceField>
-              <h2 className="text-2xl font-semibold">{record.name}</h2>
-            </div>
-            <div className={`flex gap-2 ${record.archived_at ? "" : "pr-12"}`}>
-              {record.archived_at ? (
-                <>
-                  <UnarchiveButton record={record} />
-                  <DeleteButton />
-                </>
-              ) : (
-                <>
-                  <ArchiveButton record={record} />
-                  <EditButton />
-                </>
+
+        {/* Header */}
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-4">
+            <ReferenceField
+              source="company_id"
+              reference="companies"
+              link="show"
+            >
+              <CompanyAvatar />
+            </ReferenceField>
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">
+                {record.name}
+              </h2>
+              {categoryLabel && (
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {categoryLabel}
+                </p>
               )}
             </div>
           </div>
-
-          <div className="flex gap-8 m-4">
-            <div className="flex flex-col mr-10">
-              <span className="text-xs text-muted-foreground tracking-wide">
-                {translate("resources.deals.fields.expected_closing_date")}
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm">
-                  {isValid(new Date(record.expected_closing_date))
-                    ? formatISODateString(record.expected_closing_date)
-                    : translate("resources.deals.invalid_date")}
-                </span>
-                {new Date(record.expected_closing_date) < new Date() ? (
-                  <Badge variant="destructive">
-                    {translate("crm.common.past")}
-                  </Badge>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="flex flex-col mr-10">
-              <span className="text-xs text-muted-foreground tracking-wide">
-                {translate("resources.deals.fields.amount")}
-              </span>
-              <span className="text-sm">
-                {record.amount.toLocaleString("en-US", {
-                  notation: "compact",
-                  style: "currency",
-                  currency,
-                  currencyDisplay: "narrowSymbol",
-                  minimumSignificantDigits: 3,
-                })}
-              </span>
-            </div>
-
-            {record.category && (
-              <div className="flex flex-col mr-10">
-                <span className="text-xs text-muted-foreground tracking-wide">
-                  {translate("resources.deals.fields.category")}
-                </span>
-                <span className="text-sm">
-                  {dealCategories.find((c) => c.value === record.category)
-                    ?.label ?? record.category}
-                </span>
-              </div>
+          <div className={`flex gap-2 ${record.archived_at ? "" : "pr-12"}`}>
+            {record.archived_at ? (
+              <>
+                <UnarchiveButton record={record} />
+                <DeleteButton />
+              </>
+            ) : (
+              <>
+                <ArchiveButton record={record} />
+                <EditButton />
+              </>
             )}
-
-            <div className="flex flex-col mr-10">
-              <span className="text-xs text-muted-foreground tracking-wide">
-                {translate("resources.deals.fields.stage")}
-              </span>
-              <span className="text-sm">
-                {findDealLabel(dealStages, record.stage)}
-              </span>
-            </div>
           </div>
+        </div>
 
-          {!!record.contact_ids?.length && (
-            <div className="m-4">
-              <div className="flex flex-col min-h-12 mr-10">
-                <span className="text-xs text-muted-foreground tracking-wide">
-                  {translate("resources.deals.fields.contact_ids")}
-                </span>
-                <ReferenceArrayField
-                  source="contact_ids"
-                  reference="contacts_summary"
-                >
-                  <ContactList />
-                </ReferenceArrayField>
+        {/* Info cards grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Card className="border-border/40">
+            <CardContent className="p-3 flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
+                <FolderKanban className="h-4 w-4 text-primary" />
               </div>
-            </div>
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
+                  Étape
+                </p>
+                <p className="text-sm font-semibold truncate">{stageLabel}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {record.amount != null && (
+            <Card className="border-border/40">
+              <CardContent className="p-3 flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                  <DollarSign className="h-4 w-4 text-emerald-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
+                    Montant
+                  </p>
+                  <p className="text-sm font-semibold truncate">
+                    {record.amount.toLocaleString("fr-FR", {
+                      style: "currency",
+                      currency,
+                      minimumFractionDigits: 0,
+                    })}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
-          {record.description && (
-            <div className="m-4 whitespace-pre-line">
-              <span className="text-xs text-muted-foreground tracking-wide">
-                {translate("resources.deals.fields.description")}
+          {record.category && (
+            <Card className="border-border/40">
+              <CardContent className="p-3 flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-md bg-violet-500/10 flex items-center justify-center">
+                  <Tag className="h-4 w-4 text-violet-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
+                    Catégorie
+                  </p>
+                  <p className="text-sm font-semibold truncate">
+                    {categoryLabel}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {record.expected_closing_date && (
+            <Card className="border-border/40">
+              <CardContent className="p-3 flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-md bg-amber-500/10 flex items-center justify-center">
+                  <Calendar className="h-4 w-4 text-amber-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
+                    Clôture prévue
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold truncate">
+                      {isValid(new Date(record.expected_closing_date))
+                        ? formatISODateString(record.expected_closing_date)
+                        : translate("resources.deals.invalid_date")}
+                    </p>
+                    {isValid(new Date(record.expected_closing_date)) &&
+                      new Date(record.expected_closing_date) < new Date() && (
+                        <Badge
+                          variant="destructive"
+                          className="text-[10px] px-1.5 py-0"
+                        >
+                          {translate("crm.common.past")}
+                        </Badge>
+                      )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Description */}
+        {record.description && (
+          <div className="rounded-lg border border-border/40 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Description
               </span>
-              <p className="text-sm leading-6">{record.description}</p>
             </div>
-          )}
-
-          <div className="m-4">
-            <Separator className="mb-4" />
-            <ReferenceManyField
-              target="deal_id"
-              reference="deal_notes"
-              sort={{ field: "date", order: "DESC" }}
-              empty={<NoteCreate reference={"deals"} />}
-            >
-              <NotesIterator reference="deals" />
-            </ReferenceManyField>
+            <p className="text-sm leading-relaxed whitespace-pre-line">
+              {record.description}
+            </p>
           </div>
+        )}
+
+        {/* Contacts – full details */}
+        {!!record.contact_ids?.length && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Contacts ({record.contact_ids.length})
+              </span>
+            </div>
+            <ReferenceArrayField
+              source="contact_ids"
+              reference="contacts_summary"
+            >
+              <ContactList />
+            </ReferenceArrayField>
+          </div>
+        )}
+
+        {/* Notes */}
+        <div>
+          <Separator className="mb-4" />
+          <ReferenceManyField
+            target="deal_id"
+            reference="deal_notes"
+            sort={{ field: "date", order: "DESC" }}
+            empty={<NoteCreate reference={"deals"} />}
+          >
+            <NotesIterator reference="deals" />
+          </ReferenceManyField>
         </div>
       </div>
     </>

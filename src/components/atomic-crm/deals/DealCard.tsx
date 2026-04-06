@@ -1,13 +1,41 @@
 import { Draggable } from "@hello-pangea/dnd";
 import { useRedirect, RecordContextProvider } from "ra-core";
-import { ReferenceField } from "@/components/admin/reference-field";
-import { NumberField } from "@/components/admin/number-field";
-import { SelectField } from "@/components/admin/select-field";
 import { Card, CardContent } from "@/components/ui/card";
+import { Users, Calendar, Euro, GraduationCap } from "lucide-react";
 
-import { CompanyAvatar } from "../companies/CompanyAvatar";
-import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
+
+const FORMATION_COLORS: Record<string, string> = {
+  "Acteur Leader": "bg-blue-50 text-blue-700 ring-1 ring-blue-700/10",
+  "Court-Metrage": "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-700/10",
+  "Court-métrage": "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-700/10",
+  "Doublage & Voix-Off":
+    "bg-violet-50 text-violet-700 ring-1 ring-violet-700/10",
+  "Doublage": "bg-violet-50 text-violet-700 ring-1 ring-violet-700/10",
+  "Pro Tools": "bg-amber-50 text-amber-700 ring-1 ring-amber-700/10",
+  "Cannes": "bg-pink-50 text-pink-700 ring-1 ring-pink-700/10",
+  "Résidence": "bg-orange-50 text-orange-700 ring-1 ring-orange-700/10",
+  "Journées Casting":
+    "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-700/10",
+};
+
+const getFormationColor = (formation?: string) => {
+  if (!formation) return "bg-gray-50 text-gray-600 ring-1 ring-gray-500/10";
+  for (const [key, color] of Object.entries(FORMATION_COLORS)) {
+    if (formation.toLowerCase().includes(key.toLowerCase())) return color;
+  }
+  return "bg-gray-50 text-gray-600 ring-1 ring-gray-500/10";
+};
+
+/** Parse deal name "Formation – Contact Name" into parts */
+const parseDealName = (name: string) => {
+  const sep = name.indexOf(" – ");
+  if (sep === -1) return { formation: null, contact: name };
+  return {
+    formation: name.slice(0, sep).trim(),
+    contact: name.slice(sep + 3).trim(),
+  };
+};
 
 export const DealCard = ({ deal, index }: { deal: Deal; index: number }) => {
   if (!deal) return null;
@@ -30,13 +58,16 @@ export const DealCardContent = ({
   snapshot?: any;
   deal: Deal;
 }) => {
-  const { dealCategories, currency } = useConfigurationContext();
   const redirect = useRedirect();
   const handleClick = () => {
     redirect(`/deals/${deal.id}/show`, undefined, undefined, undefined, {
       _scrollToTop: false,
     });
   };
+
+  const { formation, contact } = parseDealName(deal.name);
+  const formationLabel = deal.formation_souhaitee ?? formation;
+  const contactCount = deal.contact_ids?.length ?? 0;
 
   return (
     <div
@@ -48,50 +79,54 @@ export const DealCardContent = ({
     >
       <RecordContextProvider value={deal}>
         <Card
-          className={`py-3 transition-all duration-200 ${
+          className={`group transition-all duration-200 border-border/50 ${
             snapshot?.isDragging
-              ? "opacity-90 transform rotate-1 shadow-lg"
-              : "shadow-sm hover:shadow-md"
+              ? "opacity-90 rotate-1 shadow-lg ring-2 ring-primary/20"
+              : "shadow-sm hover:shadow-md hover:border-primary/30"
           }`}
         >
-          <CardContent className="px-3 flex flex-col">
-            <div className="flex-1 flex">
-              <p className="flex-1 text-sm font-medium mb-2">
-                <ReferenceField
-                  source="company_id"
-                  reference="companies"
-                  link={false}
-                />
-                {" - "}
-                {deal.name}
-              </p>
-              <ReferenceField
-                source="company_id"
-                reference="companies"
-                link={false}
-              >
-                <CompanyAvatar width={20} height={20} />
-              </ReferenceField>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              <NumberField
-                source="amount"
-                options={{
-                  notation: "compact",
-                  style: "currency",
-                  currency,
-                  currencyDisplay: "narrowSymbol",
-                  minimumSignificantDigits: 3,
-                }}
-              />
-              {deal.category && ", "}
-              <SelectField
-                source="category"
-                choices={dealCategories}
-                optionText="label"
-                optionValue="value"
-              />
+          <CardContent className="p-3 space-y-2">
+            {/* Formation badge */}
+            {formationLabel && (
+              <div className="flex items-center gap-1.5">
+                <GraduationCap className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+                <span
+                  className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full ${getFormationColor(formationLabel)}`}
+                >
+                  {formationLabel}
+                </span>
+              </div>
+            )}
+
+            {/* Contact name */}
+            <p className="text-sm font-semibold leading-tight">
+              {contact}
             </p>
+
+            {/* Info row: date + amount + contacts */}
+            <div className="flex items-center gap-3 pt-1 border-t border-border/40">
+              {deal.created_at && (
+                <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <Calendar className="h-3 w-3" />
+                  {new Date(deal.created_at).toLocaleDateString("fr-FR", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </span>
+              )}
+              {deal.amount != null && deal.amount > 0 && (
+                <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
+                  <Euro className="h-3 w-3" />
+                  {deal.amount.toLocaleString("fr-FR")}
+                </span>
+              )}
+              {contactCount > 0 && (
+                <span className="flex items-center gap-1 text-[10px] text-muted-foreground ml-auto">
+                  <Users className="h-3 w-3" />
+                  {contactCount}
+                </span>
+              )}
+            </div>
           </CardContent>
         </Card>
       </RecordContextProvider>

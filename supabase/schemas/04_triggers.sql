@@ -73,3 +73,35 @@ create or replace trigger on_auth_user_created
 create or replace trigger on_auth_user_updated
     after update on auth.users
     for each row execute function public.handle_update_user();
+
+-- Auto-update updated_at on contacts
+create or replace trigger set_contacts_updated_at
+    before update on public.contacts
+    for each row execute function public.update_contacts_updated_at();
+
+-- Auto-advance pipeline_status when bot fields change (e.g. reponse_relance_wa)
+-- Also syncs the corresponding deal stage
+create or replace trigger auto_advance_pipeline_status_trigger
+    before update on public.contacts
+    for each row
+    when (
+        old.reponse_relance_wa is distinct from new.reponse_relance_wa
+        or old.pipeline_status is distinct from new.pipeline_status
+    )
+    execute function public.auto_advance_pipeline_status();
+
+-- Auto-advance pipeline_status based on note content keywords
+create or replace trigger auto_pipeline_from_note_trigger
+    after insert on public.contact_notes
+    for each row
+    execute function public.auto_pipeline_from_note();
+
+-- Auto-create a deal when a new contact is inserted
+create or replace trigger auto_create_deal_on_contact_trigger
+    after insert on public.contacts
+    for each row
+    execute function public.auto_create_deal_on_contact();
+
+create or replace trigger set_documents_sales_id_trigger
+    before insert on public.documents
+    for each row execute function public.set_sales_id_default();

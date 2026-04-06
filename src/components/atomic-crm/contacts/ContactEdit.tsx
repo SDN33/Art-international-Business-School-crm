@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { EditBase, Form, useEditContext, type MutationMode } from "ra-core";
+import { EditBase, Form, useDataProvider, useEditContext, type MutationMode } from "ra-core";
 
 import type { Contact } from "../types";
 import { ContactAside } from "./ContactAside";
@@ -10,20 +10,32 @@ import {
   defaultEmailJsonb,
   defaultPhoneJsonb,
 } from "./contactModel";
+import { syncDealsStageFromContact } from "../pipeline/syncPipelineStatus";
 
 export const ContactEdit = ({
   mutationMode,
 }: {
   mutationMode?: MutationMode;
-}) => (
-  <EditBase
-    redirect="show"
-    transform={cleanupContactForEdit}
-    mutationMode={mutationMode}
-  >
-    <ContactEditContent />
-  </EditBase>
-);
+}) => {
+  const dataProvider = useDataProvider();
+
+  return (
+    <EditBase
+      redirect="show"
+      transform={cleanupContactForEdit}
+      mutationMode={mutationMode}
+      mutationOptions={{
+        onSettled: (data: any, error: any) => {
+          if (!error && data?.pipeline_status) {
+            syncDealsStageFromContact(data.id, data.pipeline_status, dataProvider);
+          }
+        },
+      }}
+    >
+      <ContactEditContent />
+    </EditBase>
+  );
+};
 
 const normalizeContactArrayFields = (record: Contact) => ({
   ...record,

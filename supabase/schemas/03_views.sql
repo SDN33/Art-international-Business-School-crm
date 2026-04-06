@@ -99,6 +99,7 @@ from public.companies c
     left join public.contacts co on c.id = co.company_id
 group by c.id;
 
+drop view if exists public.contacts_summary;
 create or replace view public.contacts_summary with (security_invoker = on) as
 select
     co.id,
@@ -118,6 +119,21 @@ select
     co.linkedin_url,
     co.email_jsonb,
     co.phone_jsonb,
+    co.pipeline_status,
+    co.origine_lead,
+    co.formation_souhaitee,
+    co.formation_slug,
+    co.utm_source,
+    co.utm_medium,
+    co.utm_campaign,
+    co.calendly_reserved,
+    co.qualification_bot,
+    co.reponse_relance_email,
+    co.reponse_relance_wa,
+    co.indice_no_show,
+    co.lien_calendly,
+    co.valeur_estimee,
+    co.converted_at,
     (jsonb_path_query_array(co.email_jsonb, '$[*]."email"'))::text as email_fts,
     (jsonb_path_query_array(co.phone_jsonb, '$[*]."number"'))::text as phone_fts,
     c.name as company_name,

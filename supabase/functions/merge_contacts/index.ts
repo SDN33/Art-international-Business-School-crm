@@ -7,6 +7,31 @@ import { AuthMiddleware, UserMiddleware } from "../_shared/authentication.ts";
 
 type Contact = Selectable<ContactsTable>;
 
+// Pipeline stages ordered from least to most advanced
+const PIPELINE_ORDER = [
+  "Nouveau lead",
+  "Contacté WA",
+  "À rappeler",
+  "Qualifié",
+  "Qualifié AFDAS",
+  "Inscrit",
+  "Converti",
+];
+
+function getBestPipelineStatus(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): string | null {
+  if (!a && !b) return null;
+  if (!a) return b!;
+  if (!b) return a;
+  const idxA = PIPELINE_ORDER.indexOf(a);
+  const idxB = PIPELINE_ORDER.indexOf(b);
+  // If both found, keep the most advanced; if not found, keep winner's
+  if (idxA >= 0 && idxB >= 0) return idxA >= idxB ? a : b;
+  return a;
+}
+
 // Helper functions to merge arrays
 function mergeArraysUnique<T>(arr1: T[], arr2: T[]): T[] {
   return [...new Set([...arr1, ...arr2])];
@@ -73,6 +98,30 @@ function mergeContactData(winner: Contact, loser: Contact) {
         : (winner.last_seen ?? loser.last_seen),
     sales_id: winner.sales_id ?? loser.sales_id,
     tags: mergeArraysUnique(winner.tags || [], loser.tags || []),
+    // AIBS-specific fields: keep the most advanced pipeline status
+    pipeline_status: getBestPipelineStatus(
+      winner.pipeline_status,
+      loser.pipeline_status,
+    ),
+    origine_lead: winner.origine_lead ?? loser.origine_lead,
+    formation_souhaitee: winner.formation_souhaitee ?? loser.formation_souhaitee,
+    formation_slug: winner.formation_slug ?? loser.formation_slug,
+    utm_source: winner.utm_source ?? loser.utm_source,
+    utm_medium: winner.utm_medium ?? loser.utm_medium,
+    utm_campaign: winner.utm_campaign ?? loser.utm_campaign,
+    calendly_reserved: winner.calendly_reserved || loser.calendly_reserved,
+    qualification_bot: winner.qualification_bot || loser.qualification_bot,
+    reponse_relance_email:
+      winner.reponse_relance_email || loser.reponse_relance_email,
+    reponse_relance_wa: winner.reponse_relance_wa || loser.reponse_relance_wa,
+    indice_no_show: winner.indice_no_show ?? loser.indice_no_show,
+    lien_calendly: winner.lien_calendly ?? loser.lien_calendly,
+    valeur_estimee:
+      winner.valeur_estimee && loser.valeur_estimee
+        ? Math.max(winner.valeur_estimee, loser.valeur_estimee)
+        : (winner.valeur_estimee ?? loser.valeur_estimee),
+    converted_at: winner.converted_at ?? loser.converted_at,
+    meta_lead_id: winner.meta_lead_id ?? loser.meta_lead_id,
   };
 }
 
@@ -87,7 +136,8 @@ async function mergeContacts(
       await trx.executeQuery(CompiledQuery.raw("SET LOCAL ROLE authenticated"));
       await trx.executeQuery(
         CompiledQuery.raw(
-          `SELECT set_config('request.jwt.claim.sub', '${userId}', true)`,
+          `SELECT set_config('request.jwt.claim.sub', $1, true)`,
+          [userId],
         ),
       );
 

@@ -8,7 +8,19 @@ import { findDealLabel } from "../deals/dealUtils";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
 
-const multiplier = {
+const multiplier: Record<string, number> = {
+  "nouveau-lead": 0.1,
+  prospect: 0.15,
+  "a-evaluer": 0.2,
+  "contact-pris": 0.3,
+  "contacte-wa": 0.3,
+  "a-rappeler": 0.35,
+  "devis-envoye": 0.5,
+  "en-negociation": 0.7,
+  qualifie: 0.8,
+  "qualifie-afdas": 0.85,
+  "envoyer-dossier-afdas": 0.9,
+  "afdas-court-metrage": 0.9,
   opportunity: 0.2,
   "proposal-sent": 0.5,
   "in-negociation": 0.8,
@@ -27,8 +39,14 @@ export const DealsChart = memo(() => {
   const acceptedLanguages = navigator
     ? navigator.languages || [navigator.language]
     : [DEFAULT_LOCALE];
-  const wonLabel = findDealLabel(dealStages, "won") ?? "Won";
-  const lostLabel = findDealLabel(dealStages, "lost") ?? "Lost";
+  const wonLabel =
+    findDealLabel(dealStages, "won") ??
+    findDealLabel(dealStages, "inscrit") ??
+    "Inscrit";
+  const lostLabel =
+    findDealLabel(dealStages, "lost") ??
+    findDealLabel(dealStages, "perdu") ??
+    "Perdu";
 
   const { data, isPending } = useGetList<Deal>("deals", {
     pagination: { perPage: 100, page: 1 },
@@ -55,20 +73,32 @@ export const DealsChart = memo(() => {
       return {
         date: format(month, "MMM"),
         won: dealsByMonth[month]
-          .filter((deal: Deal) => deal.stage === "won")
+          .filter(
+            (deal: Deal) =>
+              deal.stage === "won" ||
+              deal.stage === "inscrit" ||
+              deal.stage === "converti",
+          )
           .reduce((acc: number, deal: Deal) => {
             acc += deal.amount;
             return acc;
           }, 0),
         pending: dealsByMonth[month]
-          .filter((deal: Deal) => !["won", "lost"].includes(deal.stage))
+          .filter(
+            (deal: Deal) =>
+              !["won", "lost", "inscrit", "converti", "perdu"].includes(
+                deal.stage,
+              ),
+          )
           .reduce((acc: number, deal: Deal) => {
-            // @ts-expect-error - multiplier type issue
-            acc += deal.amount * multiplier[deal.stage];
+            acc += deal.amount * (multiplier[deal.stage] ?? 0.1);
             return acc;
           }, 0),
         lost: dealsByMonth[month]
-          .filter((deal: Deal) => deal.stage === "lost")
+          .filter(
+            (deal: Deal) =>
+              deal.stage === "lost" || deal.stage === "perdu",
+          )
           .reduce((acc: number, deal: Deal) => {
             acc -= deal.amount;
             return acc;
@@ -88,6 +118,9 @@ export const DealsChart = memo(() => {
     },
     { min: 0, max: 0 },
   );
+  // Ensure valid scale bounds to avoid NaN in SVG
+  if (range.max === 0) range.max = 100;
+  if (range.min === 0) range.min = -100;
   return (
     <div className="flex flex-col">
       <div className="flex items-center mb-4">

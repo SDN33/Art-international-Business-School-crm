@@ -5,6 +5,7 @@ import { Error } from "@/components/admin/error";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { useConfigurationLoader } from "../root/useConfigurationLoader";
+import { AiAssistant } from "../ai/AiAssistant";
 import Header from "./Header";
 
 export const Layout = ({ children }: { children: ReactNode }) => {
@@ -12,7 +13,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   return (
     <>
       <Header />
-      <main className="max-w-screen-xl mx-auto pt-4 px-4" id="main-content">
+      <main className="mx-auto pt-4 px-4 pb-16 md:pb-4" id="main-content">
         <ErrorBoundary FallbackComponent={Error}>
           <Suspense fallback={<Skeleton className="h-12 w-12 rounded-full" />}>
             {children}
@@ -20,6 +21,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
         </ErrorBoundary>
       </main>
       <Notification />
+      <AiAssistant />
     </>
   );
 };

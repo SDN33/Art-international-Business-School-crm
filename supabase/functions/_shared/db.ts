@@ -35,6 +35,23 @@ export interface ContactsTable {
   company_id: number | null;
   sales_id: number | null;
   linkedin_url: string | null;
+  // AIBS-specific fields
+  pipeline_status: string | null;
+  origine_lead: string | null;
+  formation_souhaitee: string | null;
+  formation_slug: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  calendly_reserved: boolean | null;
+  qualification_bot: boolean | null;
+  reponse_relance_email: boolean | null;
+  reponse_relance_wa: boolean | null;
+  indice_no_show: number | null;
+  lien_calendly: string | null;
+  valeur_estimee: number | null;
+  converted_at: Date | null;
+  meta_lead_id: string | null;
 }
 
 interface TasksTable {

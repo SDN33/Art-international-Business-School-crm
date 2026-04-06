@@ -6,6 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { BooleanInput } from "@/components/admin/boolean-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { TextInput } from "@/components/admin/text-input";
+import { NumberInput } from "@/components/admin/number-input";
 import { RadioButtonGroupInput } from "@/components/admin/radio-button-group-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { ArrayInput } from "@/components/admin/array-input";
@@ -42,6 +43,8 @@ export const ContactInputs = () => {
           <ContactMiscInputs />
         </div>
       </div>
+      {isMobile ? null : <Separator className="my-2" />}
+      <ContactLeadInputs />
     </div>
   );
 };
@@ -225,3 +228,112 @@ const ContactMiscInputs = () => {
 
 const saleOptionRenderer = (choice: Sale) =>
   `${choice.first_name} ${choice.last_name}`;
+
+const PIPELINE_STATUS_CHOICES = [
+  { id: "Nouveau lead", name: "Nouveau lead" },
+  { id: "Contacté WA", name: "Contacté WA" },
+  { id: "À rappeler", name: "À rappeler" },
+  { id: "Qualifié", name: "Qualifié" },
+  { id: "Qualifié AFDAS", name: "Qualifié AFDAS" },
+  { id: "Inscrit", name: "Inscrit" },
+  { id: "Converti", name: "Converti" },
+  { id: "Perdu", name: "Perdu" },
+];
+
+const ORIGINE_CHOICES = [
+  { id: "Site web", name: "Site web" },
+  { id: "Instagram", name: "Instagram" },
+  { id: "WhatsApp", name: "WhatsApp" },
+  { id: "Facebook", name: "Facebook" },
+  { id: "Recommandation", name: "Recommandation" },
+  { id: "Salon", name: "Salon" },
+  { id: "Événement", name: "Événement" },
+  { id: "Autre", name: "Autre" },
+];
+
+const ContactLeadInputs = () => {
+  return (
+    <div className="flex flex-col gap-4">
+      <h6 className="text-lg font-semibold">Informations Lead</h6>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <SelectInput
+          source="pipeline_status"
+          label="Statut pipeline"
+          choices={PIPELINE_STATUS_CHOICES}
+          helperText={false}
+          emptyText="Aucun"
+          emptyValue=""
+        />
+        <TextInput
+          source="formation_souhaitee"
+          label="Formation souhaitée"
+          helperText={false}
+        />
+        <SelectInput
+          source="origine_lead"
+          label="Origine du lead"
+          choices={ORIGINE_CHOICES}
+          helperText={false}
+          emptyText="Aucune"
+          emptyValue=""
+        />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <NumberInput
+          source="valeur_estimee"
+          label="Valeur estimée (€)"
+          helperText={false}
+        />
+        <TextInput
+          source="lien_calendly"
+          label="Lien Calendly"
+          helperText={false}
+        />
+        <TextInput
+          source="formation_slug"
+          label="Slug formation"
+          helperText={false}
+        />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <BooleanInput
+          source="calendly_reserved"
+          label="Calendly réservé"
+          helperText={false}
+        />
+        <BooleanInput
+          source="qualification_bot"
+          label="Qualifié bot"
+          helperText={false}
+        />
+        <BooleanInput
+          source="reponse_relance_email"
+          label="Réponse email"
+          helperText={false}
+        />
+        <BooleanInput
+          source="reponse_relance_wa"
+          label="Réponse WA"
+          helperText={false}
+        />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <TextInput
+          source="utm_source"
+          label="UTM Source"
+          helperText={false}
+        />
+        <TextInput
+          source="utm_medium"
+          label="UTM Medium"
+          helperText={false}
+        />
+        <TextInput
+          source="utm_campaign"
+          label="UTM Campaign"
+          helperText={false}
+        />
+      </div>
+    </div>
+  );
+};

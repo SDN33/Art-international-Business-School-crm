@@ -65,5 +65,12 @@ create policy "Enable read for authenticated" on public.configuration for select
 create policy "Enable insert for admins" on public.configuration for insert to authenticated with check (public.is_admin());
 create policy "Enable update for admins" on public.configuration for update to authenticated using (public.is_admin()) with check (public.is_admin());
 
+-- Documents
+alter table public.documents enable row level security;
+create policy "Enable read access for authenticated users" on public.documents for select to authenticated using (true);
+create policy "Enable insert for authenticated users only" on public.documents for insert to authenticated with check (true);
+create policy "Enable update for authenticated users only" on public.documents for update to authenticated using (true) with check (true);
+create policy "Documents Delete Policy" on public.documents for delete to authenticated using (true);
+
 -- Favicons excluded domains
 create policy "Enable access for authenticated users only" on public.favicons_excluded_domains to authenticated using (true) with check (true);
