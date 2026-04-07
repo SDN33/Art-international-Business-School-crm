@@ -14,7 +14,7 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => {
   return (
     <>
       <MobileHeader>
-        <div className="flex items-center gap-2 text-secondary-foreground no-underline py-3">
+        <div className="flex items-center gap-2 text-secondary-foreground">
           <img
             className="[.light_&]:hidden h-6"
             src={darkModeLogo}
@@ -25,7 +25,7 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => {
             src={lightModeLogo}
             alt={title}
           />
-          <h1 className="text-xl font-semibold">{title}</h1>
+          <h1 className="text-lg font-semibold truncate">{title}</h1>
         </div>
       </MobileHeader>
       <MobileContent>{children}</MobileContent>

@@ -82,7 +82,7 @@ export const MobileNavigation = () => {
           />
           <Button
             variant="ghost"
-            className="flex-col gap-1 h-auto py-2 px-1 rounded-md w-16 text-muted-foreground"
+            className="flex-col gap-1 h-auto py-2 px-1 rounded-md w-16 text-secondary-foreground/50 hover:bg-white/10"
             onClick={() => setMoreOpen(true)}
           >
             <Menu className="size-6" />
@@ -165,12 +165,14 @@ const NavigationButton = ({
     asChild
     variant="ghost"
     className={cn(
-      "flex-col gap-1 h-auto py-2 px-1 rounded-md w-16",
-      isActive ? null : "text-muted-foreground",
+      "flex-col gap-1 h-auto py-2 px-1 rounded-md w-16 hover:bg-white/10",
+      isActive
+        ? "text-secondary-foreground"
+        : "text-secondary-foreground/50",
     )}
   >
     <Link to={href}>
-      <Icon className="size-6" />
+      <Icon className={cn("size-6", isActive && "stroke-[2.5px]")} />
       <span className="text-[0.6rem] font-medium">{label}</span>
     </Link>
   </Button>
