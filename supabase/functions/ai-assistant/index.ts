@@ -11,7 +11,7 @@ const MODEL = "minimax-m2.7:cloud";
 const SYSTEM_PROMPT = `Tu es l'assistant IA du CRM AIBS (Art International Business School), une école de formation aux métiers artistiques (cinéma, doublage, voix-off, casting).
 Tu as 3 rôles :
 
-1. **Agent DB** — Tu peux exécuter des requêtes SQL en lecture seule (SELECT) sur la base PostgreSQL pour répondre aux questions sur les données.
+1. **Agent DB** — Tu peux exécuter des requêtes SQL (SELECT, INSERT, UPDATE, DELETE) sur la base PostgreSQL pour répondre aux questions sur les données et effectuer des modifications si l'utilisateur le demande.
 2. **Data Analyste** — Tu analyses les données CRM : leads Meta, conversions, pipeline, formations, inscriptions, performance des campagnes.
 3. **Guide CRM** — Tu aides les utilisateurs à utiliser le CRM : navigation, fonctionnalités, bonnes pratiques.
 
@@ -46,12 +46,12 @@ Formations principales : Acteur Leader, Court-métrage, Doublage & Voix-Off, Jou
 - Les notes de contact ont des statuts de température : froid, tiède, chaud, inscrit
 
 ## Règles
-- N'exécute JAMAIS de requêtes INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE.
 - Réponds toujours en français.
 - Sois concis et précis.
 - Quand tu montres des données, utilise des tableaux markdown.
 - Pour les questions de guidage CRM, explique étape par étape.
 - Si tu dois exécuter une requête SQL, retourne-la dans un bloc \`\`\`sql\`\`\` et attends les résultats.
+- Pour les opérations destructives (DELETE, UPDATE, DROP, TRUNCATE, ALTER), le système demandera automatiquement une confirmation à l'utilisateur avant d'exécuter.
 - Pour les métriques de conversion, compare toujours avec la période précédente quand c'est pertinent.
 - Aide à identifier les leads prioritaires et les actions à mener.`;
 
@@ -60,31 +60,40 @@ interface ChatMessage {
   content: string;
 }
 
-async function executeReadOnlyQuery(sql: string): Promise<string> {
-  // Sanitize: only allow SELECT statements
-  const normalized = sql.trim().replace(/--.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "").trim();
-  const firstWord = normalized.split(/\s+/)[0]?.toUpperCase();
-  if (firstWord !== "SELECT" && firstWord !== "WITH") {
-    return "❌ Seules les requêtes SELECT sont autorisées.";
-  }
+// Marker embedded in assistant messages to remember a pending destructive SQL
+const PENDING_START = "<!--PENDING_SQL:";
+const PENDING_END = ":END_PENDING_SQL-->";
 
-  // Additional safety checks
-  const forbidden = /\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|GRANT|REVOKE|EXECUTE|COPY)\b/i;
-  if (forbidden.test(normalized)) {
-    return "❌ Requête interdite. Seules les requêtes en lecture sont autorisées.";
+const DESTRUCTIVE_PATTERN = /\b(DELETE|UPDATE|DROP|TRUNCATE|ALTER)\b/i;
+const CONFIRM_PATTERN = /\b(oui|confirmer|confirme|yes|confirm|ok|execute|exécute)\b/i;
+
+interface SqlResult {
+  data: string;
+  requiresConfirmation?: boolean;
+  sql?: string;
+}
+
+async function executeSql(sql: string, forceExecute = false): Promise<SqlResult> {
+  const normalized = sql.trim();
+
+  if (DESTRUCTIVE_PATTERN.test(normalized) && !forceExecute) {
+    return {
+      data: "⚠️ Opération destructive détectée. Confirmation requise avant exécution.",
+      requiresConfirmation: true,
+      sql: normalized,
+    };
   }
 
   try {
-    const { data, error } = await supabaseAdmin.rpc("exec_readonly_sql", {
-      query_text: sql,
+    const { data, error } = await supabaseAdmin.rpc("exec_sql", {
+      query_text: normalized,
     });
     if (error) {
-      // Fallback: use the Management API if RPC not available
-      return `Erreur SQL: ${error.message}`;
+      return { data: `Erreur SQL: ${error.message}` };
     }
-    return JSON.stringify(data, null, 2);
+    return { data: JSON.stringify(data, null, 2) };
   } catch (e) {
-    return `Erreur: ${e}`;
+    return { data: `Erreur: ${e}` };
   }
 }
 
@@ -183,6 +192,33 @@ async function handleNonStreaming(
 async function processWithSqlExecution(
   messages: ChatMessage[],
 ): Promise<ChatMessage[]> {
+  // Check if the user is confirming a pending destructive operation
+  const assistantMsgs = messages.filter((m) => m.role === "assistant");
+  const userMsgs = messages.filter((m) => m.role === "user");
+  const lastAssistant = assistantMsgs[assistantMsgs.length - 1];
+  const lastUser = userMsgs[userMsgs.length - 1];
+
+  if (lastUser && lastAssistant && CONFIRM_PATTERN.test(lastUser.content)) {
+    const startIdx = lastAssistant.content.indexOf(PENDING_START);
+    const endIdx = lastAssistant.content.indexOf(PENDING_END);
+    if (startIdx !== -1 && endIdx !== -1) {
+      const pendingSql = lastAssistant.content.slice(
+        startIdx + PENDING_START.length,
+        endIdx,
+      );
+      const result = await executeSql(pendingSql, true);
+      const enrichedMessages: ChatMessage[] = [
+        ...messages,
+        {
+          role: "user",
+          content: `Opération confirmée. Résultats de la requête SQL :\n\`\`\`json\n${result.data}\n\`\`\`\nConfirme à l'utilisateur que l'opération a été effectuée et résume ce qui s'est passé.`,
+        },
+      ];
+      const finalResponse = await handleNonStreaming(enrichedMessages);
+      return [...enrichedMessages, { role: "assistant", content: finalResponse }];
+    }
+  }
+
   // First pass: let the AI decide if it needs SQL
   const firstResponse = await handleNonStreaming(messages);
 
@@ -195,7 +231,17 @@ async function processWithSqlExecution(
 
   // Execute the SQL query
   const sqlQuery = sqlMatch[1].trim();
-  const result = await executeReadOnlyQuery(sqlQuery);
+  const result = await executeSql(sqlQuery);
+
+  // Destructive operation: ask for confirmation without executing
+  if (result.requiresConfirmation && result.sql) {
+    const warningContent =
+      `${firstResponse}\n\n` +
+      `⚠️ **CONFIRMATION REQUISE** — Cette opération va **modifier ou supprimer** des données de façon irréversible.\n\n` +
+      `Répondez **"CONFIRMER"** pour exécuter, ou ignorez pour annuler.\n` +
+      `${PENDING_START}${result.sql}${PENDING_END}`;
+    return [...messages, { role: "assistant", content: warningContent }];
+  }
 
   // Feed results back to AI for interpretation
   const enrichedMessages: ChatMessage[] = [
@@ -203,7 +249,7 @@ async function processWithSqlExecution(
     { role: "assistant", content: firstResponse },
     {
       role: "user",
-      content: `Voici les résultats de la requête SQL :\n\`\`\`json\n${result}\n\`\`\`\nAnalyse ces résultats et réponds de manière claire et formatée.`,
+      content: `Voici les résultats de la requête SQL :\n\`\`\`json\n${result.data}\n\`\`\`\nAnalyse ces résultats et réponds de manière claire et formatée.`,
     },
   ];
 
