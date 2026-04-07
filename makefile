@@ -77,14 +77,14 @@ prod-start: build supabase-deploy
 prod-deploy: build supabase-deploy
 	npm run ghpages:deploy
 
-# VPS deployment via SSH git pull + build
-# Usage: make vps-deploy VPS_HOST=user@your-vps-ip VPS_DIR=/var/www/crm
-VPS_HOST ?= user@your-vps-ip
+# VPS deployment via rsync (static files)
+# Usage: make vps-deploy  (uses defaults for AIBS VPS)
+VPS_HOST ?= root@187.124.42.7
 VPS_DIR  ?= /var/www/crm
 
-vps-deploy: ## Deploy to VPS: git pull + npm install + build (Usage: make vps-deploy VPS_HOST=user@1.2.3.4 VPS_DIR=/var/www/crm)
+vps-deploy: build ## Build + rsync dist to VPS (make vps-deploy VPS_HOST=root@1.2.3.4 VPS_DIR=/var/www/crm)
 	@echo "→ Deploying to $(VPS_HOST):$(VPS_DIR)..."
-	ssh $(VPS_HOST) "cd $(VPS_DIR) && git pull origin main && npm ci && npm run build"
+	rsync -avz --delete -e "ssh -i ~/.ssh/id_ed25519" dist/ $(VPS_HOST):$(VPS_DIR)/
 	@echo "✓ Deployed to VPS"
 
 supabase-remote-init:
