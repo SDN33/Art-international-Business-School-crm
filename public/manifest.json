@@ -1,6 +1,9 @@
 {
+  "id": "/",
   "short_name": "AIBS CRM",
   "name": "Art International Business School CRM",
+  "description": "CRM de gestion des contacts, leads et formations",
+  "display_override": ["standalone", "minimal-ui"],
   "icons": [
     {
       "src": "favicon.ico",
@@ -66,9 +69,33 @@
       "type": "image/png"
     }
   ],
-  "start_url": ".",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "theme_color": "#143D4C",
-  "background_color": "#F2EEE9"
+  "background_color": "#F2EEE9",
+  "shortcuts": [
+    {
+      "name": "Pipeline",
+      "short_name": "Pipeline",
+      "description": "Voir les leads en pipeline",
+      "url": "./leads-liste",
+      "icons": [{ "src": "appIcon/192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Contacts",
+      "short_name": "Contacts",
+      "description": "Gérer les contacts",
+      "url": "./contacts",
+      "icons": [{ "src": "appIcon/192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Tâches",
+      "short_name": "Tâches",
+      "description": "Voir les tâches",
+      "url": "./tasks",
+      "icons": [{ "src": "appIcon/192.png", "sizes": "192x192" }]
+    }
+  ]
 }

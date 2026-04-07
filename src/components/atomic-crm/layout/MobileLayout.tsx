@@ -18,7 +18,7 @@ export const MobileLayout = ({ children }: { children: ReactNode }) => {
         </Suspense>
       </ErrorBoundary>
       <MobileNavigation />
-      <Notification mobileOffset={{ bottom: "72px" }} />
+      <Notification mobileOffset={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom) + 0.5rem)" }} />
       <AiAssistant />
     </>
   );

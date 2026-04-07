@@ -67,6 +67,12 @@ import { ContactListMobile } from "../contacts/ContactList.tsx";
 import { ContactShow } from "../contacts/ContactShow.tsx";
 import { CompanyShow } from "../companies/CompanyShow.tsx";
 import { NoteShowPage } from "../notes/NoteShowPage.tsx";
+import { MobileLeadsPage } from "../pipeline/MobileLeadsPage.tsx";
+import { MobilePaiementsPage } from "../suivi/MobilePaiementsPage.tsx";
+import { MobileFormationsPage } from "../formations/MobileFormationsPage.tsx";
+import { MobileInteractionsPage } from "../pipeline/MobileInteractionsPage.tsx";
+import { MobileNewsletterPage } from "../pipeline/MobileNewsletterPage.tsx";
+import { MobileDocumentsPage } from "../documents/MobileDocumentsPage.tsx";
 
 const defaultStore = localStorageStore(undefined, "CRM");
 
@@ -340,6 +346,12 @@ const MobileAdmin = (
             path={SettingsPageMobile.path}
             element={<SettingsPageMobile />}
           />
+          <Route path={ProfilePage.path} element={<ProfilePage />} />
+          <Route path="/leads-liste" element={<MobileLeadsPage />} />
+          <Route path="/paiements" element={<MobilePaiementsPage />} />
+          <Route path="/interactions" element={<MobileInteractionsPage />} />
+          <Route path="/newsletter_subscribers" element={<MobileNewsletterPage />} />
+          <Route path="/documents" element={<MobileDocumentsPage />} />
         </CustomRoutes>
         <Resource
           name="contacts"
@@ -351,6 +363,11 @@ const MobileAdmin = (
         </Resource>
         <Resource name="companies" show={CompanyShow} />
         <Resource name="tasks" list={MobileTasksList} />
+        <Resource name="formations" list={MobileFormationsPage} show={formations.show} recordRepresentation={formations.recordRepresentation} />
+        <Resource name="contact_notes" />
+        <Resource name="deal_notes" />
+        <Resource name="sales" />
+        <Resource name="tags" />
       </Admin>
     </PersistQueryClientProvider>
   );
