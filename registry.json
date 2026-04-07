@@ -134,6 +134,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/suivi/MobilePaiementsPage.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/simple-list/SimpleListLoading.tsx",
           "type": "registry:component"
         },
@@ -358,6 +362,18 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/pipeline/MobileNewsletterPage.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/pipeline/MobileLeadsPage.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/pipeline/MobileInteractionsPage.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/pipeline/LeadsListPage.tsx",
           "type": "registry:component"
         },
@@ -578,6 +594,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/formations/MobileFormationsPage.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/formations/IntervenantList.tsx",
           "type": "registry:component"
         },
@@ -603,6 +623,10 @@
         },
         {
           "path": "src/components/atomic-crm/filters/FilterCategory.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/documents/MobileDocumentsPage.tsx",
           "type": "registry:component"
         },
         {
