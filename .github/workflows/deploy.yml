@@ -201,3 +201,30 @@ jobs:
               run: npx gh-pages --remote production -d dist -b ${{ vars.DEPLOY_BRANCH || 'gh-pages' }}
               env:
                   GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN || secrets.GITHUB_TOKEN }}
+
+    deploy-vps:
+        name: 🚀 Deploy (VPS)
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        needs: deploy-supabase
+        if: ${{ secrets.VPS_HOST != '' }}
+
+        steps:
+            - name: 📡 Deploy to VPS via SSH
+              uses: appleboy/ssh-action@v1.2.0
+              with:
+                  host: ${{ secrets.VPS_HOST }}
+                  username: ${{ secrets.VPS_USER || 'root' }}
+                  password: ${{ secrets.VPS_PASSWORD }}
+                  key: ${{ secrets.VPS_SSH_KEY }}
+                  port: ${{ secrets.VPS_PORT || 22 }}
+                  script: |
+                      cd ${{ secrets.VPS_DIR || '/var/www/crm' }}
+                      git pull origin main
+                      npm ci --omit=dev
+                      npm run build
+                      echo "✅ VPS deploy done at $(date)"
+
+            - if: ${{ secrets.VPS_HOST == '' }}
+              name: VPS deployment skipped
+              run: echo ':warning:VPS_HOST secret is missing – VPS deployment skipped' >> $GITHUB_STEP_SUMMARY
