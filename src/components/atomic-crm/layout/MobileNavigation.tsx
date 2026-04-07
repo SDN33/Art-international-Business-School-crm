@@ -5,8 +5,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { Home, ListTodo, Plus, Settings, Users } from "lucide-react";
+import {
+  Home,
+  Kanban,
+  Plus,
+  ListTodo,
+  Menu,
+  Users,
+  GraduationCap,
+  CreditCard,
+  FileText,
+  Mail,
+  MessageSquare,
+  Settings,
+  User,
+} from "lucide-react";
 import { useTranslate } from "ra-core";
 import { Link, matchPath, useLocation, useMatch } from "react-router";
 import { ContactCreateSheet } from "../contacts/ContactCreateSheet";
@@ -17,70 +37,118 @@ import { TaskCreateSheet } from "../tasks/TaskCreateSheet";
 export const MobileNavigation = () => {
   const location = useLocation();
   const translate = useTranslate();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   let currentPath: string | boolean = "/";
   if (matchPath("/", location.pathname)) {
     currentPath = "/";
-  } else if (matchPath("/contacts/*", location.pathname)) {
-    currentPath = "/contacts";
-  } else if (matchPath("/companies/*", location.pathname)) {
-    currentPath = "/companies";
+  } else if (
+    matchPath("/leads-liste", location.pathname) ||
+    matchPath("/deals/*", location.pathname)
+  ) {
+    currentPath = "/leads";
   } else if (matchPath("/tasks/*", location.pathname)) {
     currentPath = "/tasks";
-  } else if (matchPath("/deals/*", location.pathname)) {
-    currentPath = "/deals";
   } else {
     currentPath = false;
   }
 
-  // Check if the app is running as a PWA (standalone mode)
-  const isPwa = window.matchMedia("(display-mode: standalone)").matches;
-  // Check if it's iOS on the web
-  const isWebiOS = /iPad|iPod|iPhone/.test(window.navigator.userAgent);
-
   return (
-    <nav
-      aria-label={translate("crm.navigation.label")}
-      className="fixed bottom-0 left-0 right-0 z-50 bg-secondary h-14"
-      style={{
-        // iOS bug: even though viewport is set correctly, the bottom safe area inset is not accounted for
-        // So we manually add some padding to avoid the navigation being too close to the home bar
-        paddingBottom: isPwa && isWebiOS ? 15 : undefined,
-        // We use box-sizing: border-box, so the height contains the padding.
-        // To actually increase the padding, we need to increase the height as well
-        height:
-          "calc(var(--spacing)) * 6" + (isPwa && isWebiOS ? " + 15px" : ""),
-      }}
-    >
-      <div className="flex justify-center">
-        <>
+    <>
+      <nav
+        aria-label={translate("crm.navigation.label")}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-secondary border-t border-border/40"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="flex justify-around items-center h-14">
           <NavigationButton
             href="/"
             Icon={Home}
-            label={translate("ra.page.dashboard")}
+            label="Accueil"
             isActive={currentPath === "/"}
           />
           <NavigationButton
-            href="/contacts"
-            Icon={Users}
-            label={translate("resources.contacts.name", {
-              smart_count: 2,
-            })}
-            isActive={currentPath === "/contacts"}
+            href="/leads-liste"
+            Icon={Kanban}
+            label="Pipeline"
+            isActive={currentPath === "/leads"}
           />
           <CreateButton />
           <NavigationButton
             href="/tasks"
             Icon={ListTodo}
-            label={translate("resources.tasks.name", { smart_count: 2 })}
+            label="Tâches"
             isActive={currentPath === "/tasks"}
           />
-          <SettingsButton />
-        </>
-      </div>
-    </nav>
+          <Button
+            variant="ghost"
+            className="flex-col gap-1 h-auto py-2 px-1 rounded-md w-16 text-muted-foreground"
+            onClick={() => setMoreOpen(true)}
+          >
+            <Menu className="size-6" />
+            <span className="text-[0.6rem] font-medium">Plus</span>
+          </Button>
+        </div>
+      </nav>
+      <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} />
+    </>
   );
 };
+
+const MoreSheet = ({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) => {
+  const close = () => onOpenChange(false);
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="bottom"
+        className="rounded-t-2xl"
+        style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))" }}
+      >
+        <SheetHeader className="text-left mb-4">
+          <SheetTitle>Navigation</SheetTitle>
+        </SheetHeader>
+        <div className="grid grid-cols-4 gap-3">
+          <MoreNavItem href="/contacts" Icon={Users} label="Contacts" onClick={close} />
+          <MoreNavItem href="/formations" Icon={GraduationCap} label="Formations" onClick={close} />
+          <MoreNavItem href="/paiements" Icon={CreditCard} label="Paiements" onClick={close} />
+          <MoreNavItem href="/documents" Icon={FileText} label="Documents" onClick={close} />
+          <MoreNavItem href="/interactions" Icon={MessageSquare} label="Interactions" onClick={close} />
+          <MoreNavItem href="/newsletter_subscribers" Icon={Mail} label="Newsletter" onClick={close} />
+          <MoreNavItem href="/settings" Icon={Settings} label="Paramètres" onClick={close} />
+          <MoreNavItem href="/profile" Icon={User} label="Profil" onClick={close} />
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+};
+
+const MoreNavItem = ({
+  href,
+  Icon,
+  label,
+  onClick,
+}: {
+  href: string;
+  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  label: string;
+  onClick: () => void;
+}) => (
+  <Link
+    to={href}
+    onClick={onClick}
+    className="flex flex-col items-center gap-2 p-3 rounded-xl bg-muted hover:bg-accent no-underline text-foreground transition-colors"
+  >
+    <Icon className="size-6 text-primary" />
+    <span className="text-[0.65rem] font-medium text-center leading-tight">{label}</span>
+  </Link>
+);
 
 const NavigationButton = ({
   href,
@@ -170,20 +238,5 @@ const CreateButton = () => {
         </DropdownMenuContent>
       </DropdownMenu>
     </>
-  );
-};
-
-const SettingsButton = () => {
-  const translate = useTranslate();
-  const location = useLocation();
-  const isActive = !!matchPath("/settings", location.pathname);
-
-  return (
-    <NavigationButton
-      href="/settings"
-      Icon={Settings}
-      label={translate("crm.settings.title")}
-      isActive={isActive}
-    />
   );
 };
