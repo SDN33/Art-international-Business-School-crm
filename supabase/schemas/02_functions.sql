@@ -3,6 +3,32 @@
 -- This file declares all PL/pgSQL functions in the public schema.
 --
 
+-- AI assistant: execute arbitrary SQL (SELECT + DML), callable by service_role only
+CREATE OR REPLACE FUNCTION "public"."exec_sql"("query_text" "text") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  result JSONB;
+  row_count INTEGER;
+BEGIN
+  BEGIN
+    EXECUTE format(
+      'SELECT COALESCE(json_agg(t), ''[]''::json)::jsonb FROM (%s) t',
+      query_text
+    ) INTO result;
+    RETURN result;
+  EXCEPTION WHEN others THEN
+    EXECUTE query_text;
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+    RETURN jsonb_build_object('rows_affected', row_count, 'success', true);
+  END;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION "public"."exec_sql"("query_text" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."exec_sql"("query_text" "text") TO "service_role";
+
 CREATE OR REPLACE FUNCTION "public"."cleanup_note_attachments"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
