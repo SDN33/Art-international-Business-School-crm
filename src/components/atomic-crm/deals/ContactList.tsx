@@ -1,11 +1,21 @@
-import { useListContext, useTranslate } from "ra-core";
+import { useGetList, useListContext, useTranslate } from "ra-core";
 import { Link as RouterLink } from "react-router";
-import { Mail, Phone, GraduationCap, ExternalLink } from "lucide-react";
+import {
+  Mail,
+  Phone,
+  GraduationCap,
+  ExternalLink,
+  MessageCircle,
+  Calendar as CalendarIcon,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 import { Avatar } from "../contacts/Avatar";
+import { LeadTemperatureBadge } from "../contacts/LeadTemperatureBadge";
+import { parseBotNote } from "../notes/BotNoteDisplay";
+import type { ContactNote } from "../types";
 
 const PIPELINE_STATUS_COLORS: Record<string, string> = {
   "Nouveau lead": "bg-purple-100 text-purple-700",
@@ -73,6 +83,7 @@ export const ContactList = () => {
                       {contact.first_name} {contact.last_name}
                     </RouterLink>
                     <div className="flex items-center gap-2 shrink-0">
+                      <LeadTemperatureBadge contact={contact} />
                       {contact.pipeline_status && (
                         <span
                           className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${PIPELINE_STATUS_COLORS[contact.pipeline_status] ?? "bg-gray-100 text-gray-700"}`}
@@ -121,6 +132,8 @@ export const ContactList = () => {
                       </span>
                     )}
                   </div>
+
+                  <ContactBotSummary contactId={contact.id} />
                 </div>
                 <Button
                   asChild
@@ -154,3 +167,74 @@ function getFirstPhone(contact: any): string | null {
   const entry = contact.phone_jsonb[0];
   return entry?.number ?? entry?.phone ?? entry?.value ?? null;
 }
+
+/**
+ * Affiche un résumé court (3 dernières notes bot) sous chaque fiche contact
+ * pour qu'un sales puisse comprendre l'historique sans ouvrir la fiche.
+ */
+const ContactBotSummary = ({ contactId }: { contactId: string | number }) => {
+  const { data, isPending } = useGetList<ContactNote>(
+    "contact_notes",
+    {
+      filter: { contact_id: contactId },
+      sort: { field: "date", order: "DESC" },
+      pagination: { page: 1, perPage: 5 },
+    },
+    { enabled: contactId != null },
+  );
+
+  if (isPending || !data?.length) return null;
+
+  const botNotes = data
+    .map((n) => ({ note: n, parsed: parseBotNote(n.text) }))
+    .filter((x) => x.parsed)
+    .slice(0, 3);
+
+  if (!botNotes.length) return null;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border/40 space-y-1.5">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+        <MessageCircle className="h-3 w-3" />
+        Résumé des échanges ({botNotes.length})
+      </div>
+      <ul className="space-y-1.5">
+        {botNotes.map(({ note, parsed }) => {
+          const date = note.date ? new Date(note.date) : null;
+          return (
+            <li
+              key={note.id}
+              className="text-xs flex items-start gap-2 leading-snug"
+            >
+              {date && (
+                <span className="flex items-center gap-1 text-[10px] text-muted-foreground shrink-0 mt-0.5">
+                  <CalendarIcon className="h-2.5 w-2.5" />
+                  {date.toLocaleDateString("fr-FR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                  })}
+                </span>
+              )}
+              <div className="flex-1 min-w-0">
+                {parsed?.issue && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0 mr-1.5 font-normal"
+                  >
+                    {parsed.issue}
+                  </Badge>
+                )}
+                {parsed?.details && (
+                  <span className="text-foreground/80">{parsed.details}</span>
+                )}
+                {!parsed?.details && parsed?.raw && (
+                  <span className="text-foreground/80">{parsed.raw}</span>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+};
