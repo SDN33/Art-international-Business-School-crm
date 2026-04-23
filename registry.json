@@ -782,6 +782,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/contacts/LeadTemperatureBadge.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/contacts/ExportVCardButton.tsx",
           "type": "registry:component"
         },
