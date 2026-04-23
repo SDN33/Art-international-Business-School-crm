@@ -25,6 +25,7 @@ import { Markdown } from "../misc/Markdown";
 import { RelativeDate } from "../misc/RelativeDate";
 import { Status } from "../misc/Status";
 import type { ContactNote, DealNote } from "../types";
+import { BotNoteDisplay, parseBotNote } from "./BotNoteDisplay";
 import { NoteAttachments } from "./NoteAttachments";
 import { NoteInputs } from "./NoteInputs";
 import { useGetSalesName } from "../sales/useGetSalesName";
@@ -186,18 +187,22 @@ export const Note = ({
           </div>
         </Form>
       ) : (
-        <div className="pt-2 text-sm max-w-150">
-          {note.text && (
-            <div
-              ref={contentRef}
-              className={cn(
-                "overflow-hidden transition-[max-height] duration-300 ease-in-out",
-                isExpanded ? "max-h-[5000px]" : "max-h-46",
-              )}
-            >
-              <Markdown>{note.text}</Markdown>
-            </div>
+        <div className="parseBotNote(note.text) ? (
+            <BotNoteDisplay text={note.text} />
+          ) : (
+            note.text && (
+              <div
+                ref={contentRef}
+                className={cn(
+                  "overflow-hidden transition-[max-height] duration-300 ease-in-out",
+                  isExpanded ? "max-h-[5000px]" : "max-h-46",
+                )}
+              >
+                <Markdown>{note.text}</Markdown>
+              </div>
+            )
           )}
+          {isTruncated && !parseBotNote(note.text)
           {isTruncated && (
             <button
               onClick={(e) => {
