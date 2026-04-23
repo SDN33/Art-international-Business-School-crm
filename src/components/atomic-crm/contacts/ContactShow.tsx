@@ -31,6 +31,7 @@ import { ContactTasksList } from "./ContactTasksList";
 import type { Contact } from "../types";
 import { Avatar } from "./Avatar";
 import { ContactAside } from "./ContactAside";
+import { LeadTemperatureBadge } from "./LeadTemperatureBadge";
 import { MobileBackButton } from "../misc/MobileBackButton";
 
 export const ContactShow = (props: ShowBaseProps = {}) => {
@@ -249,8 +250,14 @@ const ContactShowContent = () => {
             <div className="flex">
               <Avatar />
               <div className="ml-2 flex-1">
-                <h5 className="text-xl font-semibold">
+                <h5 className="text-xl font-semibold flex items-center gap-2 flex-wrap">
                   <RecordRepresentation />
+                  <LeadTemperatureBadge contact={record} />
+                  {record.pipeline_status && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-normal">
+                      {record.pipeline_status}
+                    </span>
+                  )}
                 </h5>
                 <div className="inline-flex text-sm text-muted-foreground">
                   {record.title && record.company_id != null
