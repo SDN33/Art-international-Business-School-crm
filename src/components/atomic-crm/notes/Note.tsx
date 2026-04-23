@@ -187,7 +187,8 @@ export const Note = ({
           </div>
         </Form>
       ) : (
-        <div className="parseBotNote(note.text) ? (
+        <div className="mt-1">
+          {parseBotNote(note.text) ? (
             <BotNoteDisplay text={note.text} />
           ) : (
             note.text && (
@@ -202,8 +203,7 @@ export const Note = ({
               </div>
             )
           )}
-          {isTruncated && !parseBotNote(note.text)
-          {isTruncated && (
+          {isTruncated && !parseBotNote(note.text) && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
