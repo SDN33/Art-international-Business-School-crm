@@ -589,30 +589,87 @@ CREATE OR REPLACE FUNCTION "public"."auto_create_deal_on_contact"() RETURNS "tri
     AS $$
 DECLARE
   deal_stage text;
-  deal_name text;
+  deal_name  text;
 BEGIN
-  -- Map pipeline_status (French label) → deal stage (slug)
+  -- Build the candidate name.
+  deal_name := TRIM(COALESCE(NEW.first_name, '') || ' ' || COALESCE(NEW.last_name, ''));
+
+  -- Skip deal creation if the contact has no name yet.
+  -- The UPDATE trigger (auto_create_deal_on_contact_update_trigger) will
+  -- create the deal once first_name / last_name is populated.
+  IF deal_name = '' THEN
+    RETURN NEW;
+  END IF;
+
+  -- Skip if a deal already references this contact (idempotency).
+  IF EXISTS (
+    SELECT 1 FROM public.deals WHERE NEW.id = ANY(contact_ids)
+  ) THEN
+    RETURN NEW;
+  END IF;
+
   deal_stage := CASE NEW.pipeline_status
-    WHEN 'Nouveau lead'    THEN 'nouveau-lead'
-    WHEN 'Contacté WA'     THEN 'contacte-wa'
-    WHEN 'À rappeler'      THEN 'a-rappeler'
-    WHEN 'Qualifié'        THEN 'qualifie'
-    WHEN 'Qualifié AFDAS'  THEN 'qualifie-afdas'
-    WHEN 'Inscrit'         THEN 'inscrit'
-    WHEN 'Converti'        THEN 'converti'
-    WHEN 'Perdu'           THEN 'perdu'
+    WHEN 'Nouveau lead'   THEN 'nouveau-lead'
+    WHEN 'Contacté WA'    THEN 'contacte-wa'
+    WHEN 'À rappeler'     THEN 'a-rappeler'
+    WHEN 'Qualifié'       THEN 'qualifie'
+    WHEN 'Qualifié AFDAS' THEN 'qualifie-afdas'
+    WHEN 'Inscrit'        THEN 'inscrit'
+    WHEN 'Converti'       THEN 'converti'
+    WHEN 'Perdu'          THEN 'perdu'
     ELSE 'nouveau-lead'
   END;
-
-  deal_name := TRIM(COALESCE(NEW.first_name, '') || ' ' || COALESCE(NEW.last_name, ''));
-  IF deal_name = '' THEN
-    deal_name := 'Lead #' || NEW.id::text;
-  END IF;
 
   INSERT INTO public.deals (
     name, contact_ids, stage, formation_souhaitee, sales_id, index, created_at, updated_at
   ) VALUES (
     deal_name, ARRAY[NEW.id], deal_stage, NEW.formation_souhaitee, NEW.sales_id, 0, NOW(), NOW()
+  );
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION "public"."auto_create_deal_on_contact_update"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  old_name   text;
+  new_name   text;
+  deal_stage text;
+BEGIN
+  old_name := TRIM(COALESCE(OLD.first_name, '') || ' ' || COALESCE(OLD.last_name, ''));
+  new_name := TRIM(COALESCE(NEW.first_name, '') || ' ' || COALESCE(NEW.last_name, ''));
+
+  -- Only act when the contact just gained a name (was blank before).
+  IF old_name <> '' OR new_name = '' THEN
+    RETURN NEW;
+  END IF;
+
+  -- Only act if this contact has no deal yet.
+  IF EXISTS (
+    SELECT 1 FROM public.deals WHERE NEW.id = ANY(contact_ids)
+  ) THEN
+    RETURN NEW;
+  END IF;
+
+  deal_stage := CASE NEW.pipeline_status
+    WHEN 'Nouveau lead'   THEN 'nouveau-lead'
+    WHEN 'Contacté WA'    THEN 'contacte-wa'
+    WHEN 'À rappeler'     THEN 'a-rappeler'
+    WHEN 'Qualifié'       THEN 'qualifie'
+    WHEN 'Qualifié AFDAS' THEN 'qualifie-afdas'
+    WHEN 'Inscrit'        THEN 'inscrit'
+    WHEN 'Converti'       THEN 'converti'
+    WHEN 'Perdu'          THEN 'perdu'
+    ELSE 'nouveau-lead'
+  END;
+
+  INSERT INTO public.deals (
+    name, contact_ids, stage, formation_souhaitee, sales_id, index, created_at, updated_at
+  ) VALUES (
+    new_name, ARRAY[NEW.id], deal_stage, NEW.formation_souhaitee, NEW.sales_id, 0, NOW(), NOW()
   );
 
   RETURN NEW;

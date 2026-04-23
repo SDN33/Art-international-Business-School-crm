@@ -158,9 +158,9 @@
                 return;
             }
 
-            // Handle implicit flow (tokens in hash)
+            // Handle implicit flow (tokens in hash) — redirect to set-password which reads these params
             if (p.access_token && p.refresh_token && p.type) {
-                window.location.href = './#/auth-callback?access_token=' + encodeURIComponent(p.access_token) +
+                window.location.href = './#/set-password?access_token=' + encodeURIComponent(p.access_token) +
                     '&refresh_token=' + encodeURIComponent(p.refresh_token) +
                     '&type=' + encodeURIComponent(p.type);
                 return;

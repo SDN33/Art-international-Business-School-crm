@@ -96,11 +96,17 @@ create or replace trigger auto_pipeline_from_note_trigger
     for each row
     execute function public.auto_pipeline_from_note();
 
--- Auto-create a deal when a new contact is inserted
+-- Auto-create a deal when a new contact is inserted (only if it has a name).
 create or replace trigger auto_create_deal_on_contact_trigger
     after insert on public.contacts
     for each row
     execute function public.auto_create_deal_on_contact();
+
+-- Auto-create a deal when a contact gains a name for the first time and has no deal yet.
+create or replace trigger auto_create_deal_on_contact_update_trigger
+    after update of first_name, last_name on public.contacts
+    for each row
+    execute function public.auto_create_deal_on_contact_update();
 
 create or replace trigger set_documents_sales_id_trigger
     before insert on public.documents
