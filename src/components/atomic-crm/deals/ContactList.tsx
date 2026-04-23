@@ -7,6 +7,7 @@ import {
   ExternalLink,
   MessageCircle,
   Calendar as CalendarIcon,
+  Bot,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -84,6 +85,14 @@ export const ContactList = () => {
                     </RouterLink>
                     <div className="flex items-center gap-2 shrink-0">
                       <LeadTemperatureBadge contact={contact} />
+                      {contact.qualification_bot && (
+                        <span
+                          className="inline-flex items-center justify-center rounded-full bg-indigo-100 text-indigo-700 border border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900 h-5 w-5"
+                          title="Traité par le bot openclaw"
+                        >
+                          <Bot className="h-3 w-3" />
+                        </span>
+                      )}
                       {contact.pipeline_status && (
                         <span
                           className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${PIPELINE_STATUS_COLORS[contact.pipeline_status] ?? "bg-gray-100 text-gray-700"}`}

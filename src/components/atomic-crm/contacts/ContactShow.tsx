@@ -14,7 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Pencil } from "lucide-react";
+import { Pencil, Bot } from "lucide-react";
 import { Link } from "react-router";
 
 import MobileHeader from "../layout/MobileHeader";
@@ -253,6 +253,14 @@ const ContactShowContent = () => {
                 <h5 className="text-xl font-semibold flex items-center gap-2 flex-wrap">
                   <RecordRepresentation />
                   <LeadTemperatureBadge contact={record} />
+                  {record.qualification_bot && (
+                    <span
+                      className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900 font-medium"
+                      title="Traité par le bot openclaw"
+                    >
+                      <Bot className="h-3 w-3" /> Bot
+                    </span>
+                  )}
                   {record.pipeline_status && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-normal">
                       {record.pipeline_status}

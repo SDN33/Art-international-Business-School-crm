@@ -1,9 +1,10 @@
 import { Draggable } from "@hello-pangea/dnd";
-import { useRedirect, RecordContextProvider } from "ra-core";
+import { useRedirect, RecordContextProvider, useGetOne } from "ra-core";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Calendar, Euro, GraduationCap } from "lucide-react";
+import { Users, Calendar, Euro, GraduationCap, Bot } from "lucide-react";
 
-import type { Deal } from "../types";
+import type { Contact, Deal } from "../types";
+import { LeadTemperatureBadge } from "../contacts/LeadTemperatureBadge";
 
 const FORMATION_COLORS: Record<string, string> = {
   "Acteur Leader": "bg-blue-50 text-blue-700 ring-1 ring-blue-700/10",
@@ -68,6 +69,15 @@ export const DealCardContent = ({
   const { formation, contact } = parseDealName(deal.name);
   const formationLabel = deal.formation_souhaitee ?? formation;
   const contactCount = deal.contact_ids?.length ?? 0;
+  const primaryContactId = deal.contact_ids?.[0];
+
+  // Charge le contact principal pour afficher la pastille chaud/tiède + icône bot.
+  // React Query déduplique automatiquement entre cards qui partagent le même contact.
+  const { data: primaryContact } = useGetOne<Contact>(
+    "contacts",
+    { id: primaryContactId! },
+    { enabled: !!primaryContactId },
+  );
 
   return (
     <div
@@ -86,17 +96,34 @@ export const DealCardContent = ({
           }`}
         >
           <CardContent className="p-3 space-y-2">
-            {/* Formation badge */}
-            {formationLabel && (
-              <div className="flex items-center gap-1.5">
-                <GraduationCap className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+            {/* Formation badge + pastille température + bot */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {formationLabel && (
+                <>
+                  <GraduationCap className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+                  <span
+                    className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full ${getFormationColor(formationLabel)}`}
+                  >
+                    {formationLabel}
+                  </span>
+                </>
+              )}
+              {primaryContact && (
+                <LeadTemperatureBadge
+                  contact={primaryContact}
+                  showLabel={false}
+                  size="xs"
+                />
+              )}
+              {primaryContact?.qualification_bot && (
                 <span
-                  className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full ${getFormationColor(formationLabel)}`}
+                  className="inline-flex items-center justify-center rounded-full bg-indigo-100 text-indigo-700 border border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900 h-4 w-4"
+                  title="Traité par le bot openclaw"
                 >
-                  {formationLabel}
+                  <Bot className="h-2.5 w-2.5" />
                 </span>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Contact name */}
             <p className="text-sm font-semibold leading-tight">
