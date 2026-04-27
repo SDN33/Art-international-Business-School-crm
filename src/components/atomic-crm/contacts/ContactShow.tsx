@@ -33,6 +33,8 @@ import { Avatar } from "./Avatar";
 import { ContactAside } from "./ContactAside";
 import { LeadTemperatureBadge } from "./LeadTemperatureBadge";
 import { MobileBackButton } from "../misc/MobileBackButton";
+import { SendEmailButton } from "../emails/SendEmailButton";
+import { ReceivedEmailsContact } from "../emails/ReceivedEmailsContact";
 
 export const ContactShow = (props: ShowBaseProps = {}) => {
   const isMobile = useIsMobile();
@@ -135,7 +137,7 @@ const ContactShowContentMobile = () => {
         </div>
 
         <Tabs defaultValue="notes" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-10">
+          <TabsList className="grid w-full grid-cols-4 h-10">
             <TabsTrigger value="notes">
               {translate("resources.notes.name", { smart_count: 2 })}
             </TabsTrigger>
@@ -144,6 +146,7 @@ const ContactShowContentMobile = () => {
                 smart_count: taskCount ?? 0,
               })}
             </TabsTrigger>
+            <TabsTrigger value="emails">Emails</TabsTrigger>
             <TabsTrigger value="details">
               {translate("crm.common.details")}
             </TabsTrigger>
@@ -185,6 +188,13 @@ const ContactShowContentMobile = () => {
 
           <TabsContent value="tasks" className="mt-4">
             <ContactTasksList />
+          </TabsContent>
+
+          <TabsContent value="emails" className="mt-4">
+            <ReceivedEmailsContact contactId={record.id} />
+            <div className="pt-4">
+              <SendEmailButton size="default" />
+            </div>
           </TabsContent>
 
           <TabsContent value="details" className="mt-4">
@@ -229,6 +239,9 @@ const ContactShowContentMobile = () => {
                   <TagsListEdit />
                 </div>
               </div>
+              <div className="pt-4">
+                <SendEmailButton size="default" />
+              </div>
             </div>
           </TabsContent>
         </Tabs>
@@ -244,7 +257,7 @@ const ContactShowContent = () => {
 
   return (
     <div className="mt-2 mb-2 flex gap-8">
-      <div className="flex-1">
+      <div className="flex-1 space-y-4">
         <Card>
           <CardContent>
             <div className="flex">
@@ -312,6 +325,11 @@ const ContactShowContent = () => {
             >
               <NotesIterator reference="contacts" showStatus />
             </ReferenceManyField>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <ReceivedEmailsContact contactId={record.id} />
           </CardContent>
         </Card>
       </div>

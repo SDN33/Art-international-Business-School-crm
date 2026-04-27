@@ -241,6 +241,44 @@ const getDataProviderWithCustomMethods = () => {
       });
       return data.config as ConfigurationContextValue;
     },
+    async sendEmail(params: {
+      to: string;
+      subject: string;
+      html: string;
+      contact_id?: string;
+      campaign_id?: number;
+      first_name?: string;
+    }): Promise<{ success: boolean; resend_id?: string }> {
+      const { data, error } = await getSupabaseClient().functions.invoke<{
+        success: boolean;
+        resend_id?: string;
+      }>("send_email", {
+        method: "POST",
+        body: params,
+      });
+      if (error || !data?.success) {
+        throw new Error("Failed to send email");
+      }
+      return data;
+    },
+    async sendCampaign(campaign_id: number): Promise<{
+      success: boolean;
+      total_sent: number;
+      total_error: number;
+    }> {
+      const { data, error } = await getSupabaseClient().functions.invoke<{
+        success: boolean;
+        total_sent: number;
+        total_error: number;
+      }>("send_campaign", {
+        method: "POST",
+        body: { campaign_id },
+      });
+      if (error) {
+        throw new Error("Failed to send campaign");
+      }
+      return data!;
+    },
   } satisfies DataProvider;
 };
 
@@ -350,7 +388,38 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
   {
     resource: "deals",
     beforeGetList: async (params) => {
-      return applyFullTextSearch(["name", "category", "description"])(params);
+      const { q, ...restFilter } = params.filter || {};
+      if (!q) return params;
+
+      const supabase = getSupabaseClient();
+
+      // Find contacts matching the search term (by name, email, or phone)
+      const { data: matchingContacts } = await supabase
+        .from("contacts_summary")
+        .select("id")
+        .or(
+          `first_name.ilike.%${q}%,last_name.ilike.%${q}%,email_fts.ilike.%${q}%,phone_fts.ilike.%${q}%`,
+        )
+        .limit(100);
+
+      const orConditions: Record<string, string> = {
+        "name@ilike": q,
+        "category@ilike": q,
+        "description@ilike": q,
+      };
+
+      if (matchingContacts && matchingContacts.length > 0) {
+        const contactIds = matchingContacts.map((c) => c.id);
+        orConditions["contact_ids@ov"] = `{${contactIds.join(",")}}`;
+      }
+
+      return {
+        ...params,
+        filter: {
+          ...restFilter,
+          "@or": orConditions,
+        },
+      };
     },
   },
 ];

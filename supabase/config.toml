@@ -175,3 +175,9 @@ verify_jwt = false
 
 [functions.ai-assistant]
 verify_jwt = false
+[functions.send_email]
+verify_jwt = false
+[functions.send_campaign]
+verify_jwt = false
+[functions.receive_email]
+verify_jwt = false

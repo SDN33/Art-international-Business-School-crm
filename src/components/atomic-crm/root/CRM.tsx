@@ -73,6 +73,7 @@ import { MobileFormationsPage } from "../formations/MobileFormationsPage.tsx";
 import { MobileInteractionsPage } from "../pipeline/MobileInteractionsPage.tsx";
 import { MobileNewsletterPage } from "../pipeline/MobileNewsletterPage.tsx";
 import { MobileDocumentsPage } from "../documents/MobileDocumentsPage.tsx";
+import { EmailPage } from "../emails/EmailPage.tsx";
 
 const defaultStore = localStorageStore(undefined, "CRM");
 
@@ -278,7 +279,9 @@ const DesktopAdmin = (
         <Route path="/newsletter_subscribers" element={<NewsletterList />} />
         <Route path="/paiements" element={<PaiementList />} />
         <Route path="/taches" element={<TasksKanbanPage />} />
-        <Route path="/documents" element={<DocumentList />} />
+        <Route path="/documents" element={<DocumentList />} />          <Route path="/emails" element={<EmailPage />} />
+          <Route path="/email-campaigns" element={<EmailPage />} />
+          <Route path="/email-inbox" element={<EmailPage />} />
       </CustomRoutes>
       <Resource name="deals" {...deals} />
       <Resource name="contacts" {...contacts} />
@@ -292,6 +295,10 @@ const DesktopAdmin = (
       <Resource name="training_sessions" list={SessionList} />
       <Resource name="intervenants" list={IntervenantList} />
       <Resource name="documents" />
+      <Resource name="email_campaigns" />
+      <Resource name="email_campaign_contacts" />
+      <Resource name="email_logs" />
+      <Resource name="received_emails" />
     </Admin>
   );
 };

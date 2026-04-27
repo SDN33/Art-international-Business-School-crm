@@ -316,6 +316,21 @@ export const createDataProvider = ({
       });
       return config;
     },
+    sendEmail: async (params: {
+      to: string;
+      subject: string;
+      html: string;
+      contact_id?: string;
+      campaign_id?: number;
+      first_name?: string;
+    }) => {
+      console.log("[FakeRest] sendEmail (demo mode)", params);
+      return { success: true, resend_id: "demo-resend-id" };
+    },
+    sendCampaign: async (campaign_id: number) => {
+      console.log("[FakeRest] sendCampaign (demo mode)", campaign_id);
+      return { success: true, total_sent: 0, total_error: 0 };
+    },
   };
 
   const dataProvider = withLifecycleCallbacks(

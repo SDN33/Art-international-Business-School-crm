@@ -1,0 +1,275 @@
+{
+  "name": "AIBS - Rappel Visio 2h avant",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "b2c3d4e5-0001-4000-8000-000000000001",
+      "name": "Toutes les 15 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fenêtre : événements démarrant dans 1h45 à 2h15\nconst now = new Date();\nconst min = new Date(now.getTime() + (1*60+45)*60*1000);\nconst max = new Date(now.getTime() + (2*60+15)*60*1000);\nreturn [{ json: { min_start: min.toISOString(), max_start: max.toISOString() } }];"
+      },
+      "id": "b2c3d4e5-0002-4000-8000-000000000002",
+      "name": "Fenêtre +2h",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.calendly.com/scheduled_events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJraWQiOiIxY2UxZTEzNjE3ZGNmNzY2YjNjZWJjY2Y4ZGM1YmFmYThhNjVlNjg0MDIzZjdjMzJiZTgzNDliMjM4MDEzNWI0IiwidHlwIjoiUEFUIiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJodHRwczovL2F1dGguY2FsZW5kbHkuY29tIiwiaWF0IjoxNzc1MjA1NjAzLCJqdGkiOiI4Zjc3ZTNkMy00OTQwLTRmNzktYTNmNi03ZTE0YTdkOTc5NDkiLCJ1c2VyX3V1aWQiOiI1NTBmOTJlNy0xMjVlLTRlZWUtYjg1Zi03MzRlYjUyZWUxNDMiLCJzY29wZSI6ImF2YWlsYWJpbGl0eTpyZWFkIGF2YWlsYWJpbGl0eTp3cml0ZSBldmVudF90eXBlczpyZWFkIGV2ZW50X3R5cGVzOndyaXRlIGxvY2F0aW9uczpyZWFkIHJvdXRpbmdfZm9ybXM6cmVhZCBzaGFyZXM6d3JpdGUgc2NoZWR1bGVkX2V2ZW50czpyZWFkIHNjaGVkdWxlZF9ldmVudHM6d3JpdGUgc2NoZWR1bGluZ19saW5rczp3cml0ZSBncm91cHM6cmVhZCBvcmdhbml6YXRpb25zOnJlYWQgb3JnYW5pemF0aW9uczp3cml0ZSB1c2VyczpyZWFkIGFjdGl2aXR5X2xvZzpyZWFkIGRhdGFfY29tcGxpYW5jZTp3cml0ZSBvdXRnb2luZ19jb21tdW5pY2F0aW9uczpyZWFkIHdlYmhvb2tzOnJlYWQgd2ViaG9va3M6d3JpdGUifQ.58CEQEYSS4z8aaHCkfxTL47TnOTVcLpI0YZwX2_b8z7f1Rz9vNioHf2JJhlSLT6knyNU6O83P6ih2qzNUyARxA"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (compatible; AIBS-Bot/1.0)"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "user", "value": "https://api.calendly.com/users/550f92e7-125e-4eee-b85f-734eb52ee143" },
+            { "name": "status", "value": "active" },
+            { "name": "min_start_time", "value": "={{ $json.min_start }}" },
+            { "name": "max_start_time", "value": "={{ $json.max_start }}" },
+            { "name": "count", "value": "20" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2c3d4e5-0003-4000-8000-000000000003",
+      "name": "Fetch events 2h",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const events = $json.collection || [];\nif (events.length === 0) return [];\nreturn events.map(e => ({\n  json: {\n    event_uuid: e.uri?.split('/').pop(),\n    start_time: e.start_time,\n    join_url: e.location?.join_url || e.location?.location || 'https://calendly.com/caroline-art-aibs/30min'\n  }\n}));"
+      },
+      "id": "b2c3d4e5-0004-4000-8000-000000000004",
+      "name": "Extraire events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.calendly.com/scheduled_events/{{ $json.event_uuid }}/invitees",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJraWQiOiIxY2UxZTEzNjE3ZGNmNzY2YjNjZWJjY2Y4ZGM1YmFmYThhNjVlNjg0MDIzZjdjMzJiZTgzNDliMjM4MDEzNWI0IiwidHlwIjoiUEFUIiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJodHRwczovL2F1dGguY2FsZW5kbHkuY29tIiwiaWF0IjoxNzc1MjA1NjAzLCJqdGkiOiI4Zjc3ZTNkMy00OTQwLTRmNzktYTNmNi03ZTE0YTdkOTc5NDkiLCJ1c2VyX3V1aWQiOiI1NTBmOTJlNy0xMjVlLTRlZWUtYjg1Zi03MzRlYjUyZWUxNDMiLCJzY29wZSI6ImF2YWlsYWJpbGl0eTpyZWFkIGF2YWlsYWJpbGl0eTp3cml0ZSBldmVudF90eXBlczpyZWFkIGV2ZW50X3R5cGVzOndyaXRlIGxvY2F0aW9uczpyZWFkIHJvdXRpbmdfZm9ybXM6cmVhZCBzaGFyZXM6d3JpdGUgc2NoZWR1bGVkX2V2ZW50czpyZWFkIHNjaGVkdWxlZF9ldmVudHM6d3JpdGUgc2NoZWR1bGluZ19saW5rczp3cml0ZSBncm91cHM6cmVhZCBvcmdhbml6YXRpb25zOnJlYWQgb3JnYW5pemF0aW9uczp3cml0ZSB1c2VyczpyZWFkIGFjdGl2aXR5X2xvZzpyZWFkIGRhdGFfY29tcGxpYW5jZTp3cml0ZSBvdXRnb2luZ19jb21tdW5pY2F0aW9uczpyZWFkIHdlYmhvb2tzOnJlYWQgd2ViaG9va3M6d3JpdGUifQ.58CEQEYSS4z8aaHCkfxTL47TnOTVcLpI0YZwX2_b8z7f1Rz9vNioHf2JJhlSLT6knyNU6O83P6ih2qzNUyARxA"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (compatible; AIBS-Bot/1.0)"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "status", "value": "active" },
+            { "name": "count", "value": "20" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2c3d4e5-0005-4000-8000-000000000005",
+      "name": "Fetch invités 2h",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const eventItem = $('Extraire events').item.json;\nconst invitees = $json.collection || [];\nreturn invitees\n  .filter(inv => inv.status === 'active' && inv.email)\n  .map(inv => ({\n    json: {\n      event_uuid: eventItem.event_uuid,\n      start_time: eventItem.start_time,\n      join_url: eventItem.join_url,\n      invitee_email: inv.email,\n      invitee_name: inv.name || ''\n    }\n  }));"
+      },
+      "id": "b2c3d4e5-0006-4000-8000-000000000006",
+      "name": "Aplatir invités 2h",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://lmlehskymbrqxqoepuuk.supabase.co/rest/v1/contacts_summary?select=id,first_name,phone_jsonb&email_fts=ilike.*{{ encodeURIComponent($json.invitee_email) }}*&limit=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2c3d4e5-0007-4000-8000-000000000007",
+      "name": "Contact Supabase 2h",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const invData = $('Aplatir invités 2h').item.json;\nconst contacts = Array.isArray($json) ? $json : [];\nconst contact = contacts[0];\nif (!contact?.id) return [];\n\nconst phones = Array.isArray(contact.phone_jsonb) ? contact.phone_jsonb : [];\nconst phone = phones[0]?.number || '';\nif (!phone) return [];\n\n// Anti-doublon via notes Supabase (vérification externe non possible ici)\n// Le rappel est envoyé si le champ n8n static data ne contient pas l'uuid aujourd'hui\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.reminded2h) staticData.reminded2h = {};\n\n// Clé = event_uuid + date du jour\nconst today = new Date().toISOString().slice(0,10);\nconst key = invData.event_uuid + '_' + today;\nif (staticData.reminded2h[key]) return []; // déjà envoyé\n\nconst dt = new Date(invData.start_time);\nconst parisHour = (dt.getUTCHours() + 2) % 24;\nconst timeStr = String(parisHour).padStart(2,'0') + 'h' + String(dt.getUTCMinutes()).padStart(2,'0');\nconst firstName = (invData.invitee_name || '').split(' ')[0] || 'vous';\nconst joinUrl = invData.join_url || 'https://calendly.com/caroline-art-aibs/30min';\n\nconst message = `Bonjour ${firstName} ! ⏰\\n\\nVotre diagnostic de carrière artistique avec l'AIBS commence dans 2h, à ${timeStr}.\\n\\nLien de connexion :\\n${joinUrl}\\n\\nÀ tout à l'heure ! 🎨`;\n\nreturn [{\n  json: {\n    ...invData,\n    contact_id: contact.id,\n    phone,\n    message,\n    dedup_key: key,\n    time_str: timeStr\n  }\n}];"
+      },
+      "id": "b2c3d4e5-0008-4000-8000-000000000008",
+      "name": "Préparer rappel 2h",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://187.124.42.7:8767/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer aibs-wa-relay-xK9mP3qR"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "phone", "value": "={{ $json.phone }}" },
+            { "name": "message", "value": "={{ $json.message }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2c3d4e5-0009-4000-8000-000000000009",
+      "name": "Envoyer rappel WA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2000, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Préparer rappel 2h').item.json;\nconst firstName = (d.invitee_name || '').split(' ')[0] || 'vous';\nconst email = d.invitee_email || '';\nif (!email) return [];\nconst joinUrl = d.join_url || 'https://calendly.com/caroline-art-aibs/30min';\nconst timeStr = d.time_str || '';\nconst subject = `⏰ Rappel : votre visio AIBS dans 2h (${timeStr})`;\nconst html = `<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto'>\n  <h2 style='color:#1a1a2e'>Rappel — Votre diagnostic de carrière</h2>\n  <p>Bonjour ${firstName},</p>\n  <p>Votre session de diagnostic artistique avec l'AIBS commence <strong>dans 2 heures, à ${timeStr}</strong>.</p>\n  <p style='text-align:center;margin:30px 0'>\n    <a href='${joinUrl}' style='background:#e94560;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold'>Rejoindre le visio</a>\n  </p>\n  <p style='color:#666;font-size:13px'>Si ce lien ne fonctionne pas, copiez-le dans votre navigateur :<br>${joinUrl}</p>\n  <p>À tout à l'heure ! 🎨<br>L'équipe AIBS</p>\n</div>`;\nreturn [{ json: { to: email, subject, html } }];"
+      },
+      "id": "b2c3d4e5-0011-4000-8000-000000000011",
+      "name": "Préparer email 2h",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://187.124.42.7:8767/send-email",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer aibs-wa-relay-xK9mP3qR"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "response": { "response": { "neverError": true } }
+        }
+      },
+      "id": "b2c3d4e5-0012-4000-8000-000000000012",
+      "name": "Envoyer Email 2h",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2220, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Marquer comme rappelé dans static data\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.reminded2h) staticData.reminded2h = {};\nconst key = $('Préparer rappel 2h').item.json.dedup_key;\nif (key) staticData.reminded2h[key] = Date.now();\n// Nettoyer > 3 jours\nconst cutoff = Date.now() - 3*24*60*60*1000;\nfor (const [k,v] of Object.entries(staticData.reminded2h)) {\n  if (v < cutoff) delete staticData.reminded2h[k];\n}\nreturn $input.all();"
+      },
+      "id": "b2c3d4e5-0010-4000-8000-000000000010",
+      "name": "Marquer rappelé",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 300]
+    }
+  ],
+  "connections": {
+    "Toutes les 15 min": {
+      "main": [[{ "node": "Fenêtre +2h", "type": "main", "index": 0 }]]
+    },
+    "Fenêtre +2h": {
+      "main": [[{ "node": "Fetch events 2h", "type": "main", "index": 0 }]]
+    },
+    "Fetch events 2h": {
+      "main": [[{ "node": "Extraire events", "type": "main", "index": 0 }]]
+    },
+    "Extraire events": {
+      "main": [[{ "node": "Fetch invités 2h", "type": "main", "index": 0 }]]
+    },
+    "Fetch invités 2h": {
+      "main": [[{ "node": "Aplatir invités 2h", "type": "main", "index": 0 }]]
+    },
+    "Aplatir invités 2h": {
+      "main": [[{ "node": "Contact Supabase 2h", "type": "main", "index": 0 }]]
+    },
+    "Contact Supabase 2h": {
+      "main": [[{ "node": "Préparer rappel 2h", "type": "main", "index": 0 }]]
+    },
+    "Préparer rappel 2h": {
+      "main": [[
+        { "node": "Envoyer rappel WA", "type": "main", "index": 0 },
+        { "node": "Préparer email 2h", "type": "main", "index": 0 }
+      ]]
+    },
+    "Envoyer rappel WA": {
+      "main": [[{ "node": "Marquer rappelé", "type": "main", "index": 0 }]]
+    },
+    "Préparer email 2h": {
+      "main": [[{ "node": "Envoyer Email 2h", "type": "main", "index": 0 }]]
+    },
+    "Envoyer Email 2h": {
+      "main": [[{ "node": "Marquer rappelé", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
