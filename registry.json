@@ -630,6 +630,38 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/emails/SendEmailButton.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/emails/ReceivedEmailsContact.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/emails/EmailSentTab.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/emails/EmailPage.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/emails/EmailInboxTab.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/emails/EmailInboxList.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/emails/EmailCampaignsTab.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/emails/EmailCampaignList.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/documents/MobileDocumentsPage.tsx",
           "type": "registry:component"
         },

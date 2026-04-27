@@ -1,4 +1,5 @@
-import { BookOpen, ChevronDown, ClipboardList, CreditCard, FileText, Import, Inbox, Kanban, Mail, MessageSquare, Send, Settings, User, Users } from "lucide-react";
+import type React from "react";
+import { BookOpen, ChevronDown, ClipboardList, CreditCard, FileText, Import, Inbox, Kanban, List, Mail, MessageSquare, Send, Settings, User, Users } from "lucide-react";
 import { CanAccess, useTranslate, useUserMenu } from "ra-core";
 import { Link, matchPath, useLocation } from "react-router";
 import { RefreshButton } from "@/components/admin/refresh-button";
@@ -42,6 +43,8 @@ const Header = () => {
     matchPath("/email-inbox", location.pathname)
   ) {
     currentPath = "/emails";
+  } else if (matchPath("/contact-lists", location.pathname)) {
+    currentPath = "/contact-lists";
   } else if (
     matchPath("/paiements/*", location.pathname) ||
     matchPath("/taches", location.pathname) ||
@@ -85,6 +88,12 @@ const Header = () => {
                   <PipelineDropdown isActive={currentPath === "/pipeline"} />
                   <SuiviDropdown isActive={currentPath === "/suivi"} />
                   <EmailsDropdown isActive={currentPath === "/emails"} />
+                  <NavigationTab
+                    label="Listes"
+                    to="/contact-lists"
+                    icon={<List className="h-4 w-4" />}
+                    isActive={currentPath === "/contact-lists"}
+                  />
                 </nav>
               </div>
               <div className="flex items-center">
@@ -113,19 +122,22 @@ const NavigationTab = ({
   label,
   to,
   isActive,
+  icon,
 }: {
   label: string;
   to: string;
   isActive: boolean;
+  icon?: React.ReactNode;
 }) => (
   <Link
     to={to}
-    className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
+    className={`flex items-center gap-1 px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
       isActive
         ? "text-secondary-foreground border-secondary-foreground"
         : "text-secondary-foreground/70 border-transparent hover:text-secondary-foreground/80"
     }`}
   >
+    {icon}
     {label}
   </Link>
 );

@@ -216,13 +216,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://187.124.42.7:8767/send-email",
+        "url": "https://api.resend.com/emails",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer aibs-wa-relay-xK9mP3qR"
+              "value": "Bearer re_51Jcs1fD_2mNFKMC827s2LQxoNmJ368VQ"
             },
             {
               "name": "Content-Type",
@@ -232,7 +232,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}",
+        "jsonBody": "={{ JSON.stringify({ from: 'AIBS <contact@artaibs.fr>', to: [$json.to], subject: $json.subject, html: $json.html }) }}",
         "options": {
           "response": { "response": { "neverError": true } }
         }
