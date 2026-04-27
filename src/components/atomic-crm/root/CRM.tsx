@@ -74,6 +74,7 @@ import { MobileInteractionsPage } from "../pipeline/MobileInteractionsPage.tsx";
 import { MobileNewsletterPage } from "../pipeline/MobileNewsletterPage.tsx";
 import { MobileDocumentsPage } from "../documents/MobileDocumentsPage.tsx";
 import { EmailPage } from "../emails/EmailPage.tsx";
+import { ContactListsPage } from "../contacts/ContactListsPage.tsx";
 
 const defaultStore = localStorageStore(undefined, "CRM");
 
@@ -282,6 +283,7 @@ const DesktopAdmin = (
         <Route path="/documents" element={<DocumentList />} />          <Route path="/emails" element={<EmailPage />} />
           <Route path="/email-campaigns" element={<EmailPage />} />
           <Route path="/email-inbox" element={<EmailPage />} />
+          <Route path="/contact-lists" element={<ContactListsPage />} />
       </CustomRoutes>
       <Resource name="deals" {...deals} />
       <Resource name="contacts" {...contacts} />
@@ -298,6 +300,8 @@ const DesktopAdmin = (
       <Resource name="email_campaigns" />
       <Resource name="email_campaign_contacts" />
       <Resource name="email_logs" />
+      <Resource name="contact_lists" />
+      <Resource name="contact_list_members" />
       <Resource name="received_emails" />
     </Admin>
   );
