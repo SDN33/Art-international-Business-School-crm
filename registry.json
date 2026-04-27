@@ -838,6 +838,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/contacts/ContactListsPage.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/contacts/ContactListFilter.tsx",
           "type": "registry:component"
         },
