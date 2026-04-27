@@ -54,3 +54,5 @@ node_modules/
 
 # WA conversation extracts (contain PII)
 /wa_export/
+.vercel
+.env*.local

@@ -1,0 +1,333 @@
+{
+  "name": "AIBS - Confirmation Visio (Calendly)",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Toutes les 5 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fenêtre : événements qui commencent dans les prochains 7 jours\nconst now = new Date();\nconst max = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);\nreturn [{ json: {\n  min_start: now.toISOString(),\n  max_start: max.toISOString()\n}}];"
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Fenêtre 7 jours",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.calendly.com/scheduled_events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJraWQiOiIxY2UxZTEzNjE3ZGNmNzY2YjNjZWJjY2Y4ZGM1YmFmYThhNjVlNjg0MDIzZjdjMzJiZTgzNDliMjM4MDEzNWI0IiwidHlwIjoiUEFUIiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJodHRwczovL2F1dGguY2FsZW5kbHkuY29tIiwiaWF0IjoxNzc1MjA1NjAzLCJqdGkiOiI4Zjc3ZTNkMy00OTQwLTRmNzktYTNmNi03ZTE0YTdkOTc5NDkiLCJ1c2VyX3V1aWQiOiI1NTBmOTJlNy0xMjVlLTRlZWUtYjg1Zi03MzRlYjUyZWUxNDMiLCJzY29wZSI6ImF2YWlsYWJpbGl0eTpyZWFkIGF2YWlsYWJpbGl0eTp3cml0ZSBldmVudF90eXBlczpyZWFkIGV2ZW50X3R5cGVzOndyaXRlIGxvY2F0aW9uczpyZWFkIHJvdXRpbmdfZm9ybXM6cmVhZCBzaGFyZXM6d3JpdGUgc2NoZWR1bGVkX2V2ZW50czpyZWFkIHNjaGVkdWxlZF9ldmVudHM6d3JpdGUgc2NoZWR1bGluZ19saW5rczp3cml0ZSBncm91cHM6cmVhZCBvcmdhbml6YXRpb25zOnJlYWQgb3JnYW5pemF0aW9uczp3cml0ZSB1c2VyczpyZWFkIGFjdGl2aXR5X2xvZzpyZWFkIGRhdGFfY29tcGxpYW5jZTp3cml0ZSBvdXRnb2luZ19jb21tdW5pY2F0aW9uczpyZWFkIHdlYmhvb2tzOnJlYWQgd2ViaG9va3M6d3JpdGUifQ.58CEQEYSS4z8aaHCkfxTL47TnOTVcLpI0YZwX2_b8z7f1Rz9vNioHf2JJhlSLT6knyNU6O83P6ih2qzNUyARxA"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (compatible; AIBS-Bot/1.0)"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "user",
+              "value": "https://api.calendly.com/users/550f92e7-125e-4eee-b85f-734eb52ee143"
+            },
+            {
+              "name": "status",
+              "value": "active"
+            },
+            {
+              "name": "min_start_time",
+              "value": "={{ $json.min_start }}"
+            },
+            {
+              "name": "max_start_time",
+              "value": "={{ $json.max_start }}"
+            },
+            {
+              "name": "count",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Fetch RDV Calendly",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtre les events déjà confirmés via static data\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.confirmed) staticData.confirmed = {};\n\n// Nettoyer les entrées > 8 jours\nconst cutoff = Date.now() - 8 * 24 * 60 * 60 * 1000;\nfor (const [k, v] of Object.entries(staticData.confirmed)) {\n  if (v < cutoff) delete staticData.confirmed[k];\n}\n\nconst events = $json.collection || [];\nconst newEvents = events.filter(e => {\n  const uuid = e.uri?.split('/').pop();\n  return uuid && !staticData.confirmed[uuid];\n});\n\nreturn newEvents.map(e => ({\n  json: {\n    event_uuid: e.uri?.split('/').pop(),\n    start_time: e.start_time,\n    join_url: e.location?.join_url || e.location?.location || 'https://calendly.com/caroline-art-aibs/30min',\n    event_name: e.name\n  }\n}));"
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Filtrer nouveaux events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.calendly.com/scheduled_events/{{ $json.event_uuid }}/invitees",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJraWQiOiIxY2UxZTEzNjE3ZGNmNzY2YjNjZWJjY2Y4ZGM1YmFmYThhNjVlNjg0MDIzZjdjMzJiZTgzNDliMjM4MDEzNWI0IiwidHlwIjoiUEFUIiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJodHRwczovL2F1dGguY2FsZW5kbHkuY29tIiwiaWF0IjoxNzc1MjA1NjAzLCJqdGkiOiI4Zjc3ZTNkMy00OTQwLTRmNzktYTNmNi03ZTE0YTdkOTc5NDkiLCJ1c2VyX3V1aWQiOiI1NTBmOTJlNy0xMjVlLTRlZWUtYjg1Zi03MzRlYjUyZWUxNDMiLCJzY29wZSI6ImF2YWlsYWJpbGl0eTpyZWFkIGF2YWlsYWJpbGl0eTp3cml0ZSBldmVudF90eXBlczpyZWFkIGV2ZW50X3R5cGVzOndyaXRlIGxvY2F0aW9uczpyZWFkIHJvdXRpbmdfZm9ybXM6cmVhZCBzaGFyZXM6d3JpdGUgc2NoZWR1bGVkX2V2ZW50czpyZWFkIHNjaGVkdWxlZF9ldmVudHM6d3JpdGUgc2NoZWR1bGluZ19saW5rczp3cml0ZSBncm91cHM6cmVhZCBvcmdhbml6YXRpb25zOnJlYWQgb3JnYW5pemF0aW9uczp3cml0ZSB1c2VyczpyZWFkIGFjdGl2aXR5X2xvZzpyZWFkIGRhdGFfY29tcGxpYW5jZTp3cml0ZSBvdXRnb2luZ19jb21tdW5pY2F0aW9uczpyZWFkIHdlYmhvb2tzOnJlYWQgd2ViaG9va3M6d3JpdGUifQ.58CEQEYSS4z8aaHCkfxTL47TnOTVcLpI0YZwX2_b8z7f1Rz9vNioHf2JJhlSLT6knyNU6O83P6ih2qzNUyARxA"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (compatible; AIBS-Bot/1.0)"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "status", "value": "active" },
+            { "name": "count", "value": "20" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Fetch invités",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aplatir invités + enrichir avec données event du nœud précédent\nconst eventItem = $('Filtrer nouveaux events').item.json;\nconst invitees = $json.collection || [];\n\nreturn invitees\n  .filter(inv => inv.status === 'active' && inv.email)\n  .map(inv => ({\n    json: {\n      event_uuid: eventItem.event_uuid,\n      start_time: eventItem.start_time,\n      join_url: eventItem.join_url,\n      invitee_email: inv.email,\n      invitee_name: inv.name || '',\n      invitee_uuid: inv.uri?.split('/').pop()\n    }\n  }));"
+      },
+      "id": "a1b2c3d4-0006-4000-8000-000000000006",
+      "name": "Aplatir invités",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://lmlehskymbrqxqoepuuk.supabase.co/rest/v1/contacts_summary?select=id,first_name,phone_jsonb&email_fts=ilike.*{{ encodeURIComponent($json.invitee_email) }}*&limit=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0007-4000-8000-000000000007",
+      "name": "Chercher contact Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Construire message WA confirmation\nconst inviteeData = $('Aplatir invités').item.json;\nconst contacts = Array.isArray($json) ? $json : [];\nconst contact = contacts[0];\n\nif (!contact?.id) return []; // contact non trouvé\n\nconst phones = Array.isArray(contact.phone_jsonb) ? contact.phone_jsonb : [];\nconst phone = phones[0]?.number || '';\nif (!phone) return []; // pas de téléphone\n\n// Formater date heure Paris (CEST = UTC+2)\nconst dt = new Date(inviteeData.start_time);\nconst parisHour = (dt.getUTCHours() + 2) % 24;\nconst timeStr = String(parisHour).padStart(2,'0') + 'h' + String(dt.getUTCMinutes()).padStart(2,'0');\nconst days = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];\nconst months = ['','janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];\nconst dayStr = days[dt.getUTCDay()] + ' ' + dt.getUTCDate() + ' ' + months[dt.getUTCMonth()+1];\n\nconst firstName = (inviteeData.invitee_name || '').split(' ')[0] || 'vous';\nconst joinUrl = inviteeData.join_url || 'https://calendly.com/caroline-art-aibs/30min';\n\nconst message = `Bonjour ${firstName} ! 🎨\\n\\nVotre diagnostic de carrière artistique avec l'AIBS est confirmé pour le ${dayStr} à ${timeStr}.\\n\\nLien de connexion :\\n${joinUrl}\\n\\nÀ très bientôt !`;\n\nreturn [{\n  json: {\n    ...inviteeData,\n    contact_id: contact.id,\n    phone,\n    message,\n    date_str: dayStr + ' à ' + timeStr\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0008-4000-8000-000000000008",
+      "name": "Préparer message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://187.124.42.7:8767/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer aibs-wa-relay-xK9mP3qR"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {
+          "response": { "response": { "neverError": true } }
+        }
+      },
+      "id": "a1b2c3d4-0009-4000-8000-000000000009",
+      "name": "Envoyer WA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2000, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Email HTML de confirmation\nconst d = $('Préparer message').item.json;\nconst firstName = (d.invitee_name || '').split(' ')[0] || 'vous';\nconst joinUrl = d.join_url || 'https://calendly.com/caroline-art-aibs/30min';\nconst dateStr = d.date_str || 'date inconnue';\nconst toEmail = d.invitee_email || '';\nif (!toEmail) return [];\nreturn [{ json: {\n  to: toEmail,\n  subject: `Confirmation : votre diagnostic de carrière artistique avec l'AIBS — ${dateStr}`,\n  html: `<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head><body style=\"font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#333\"><div style=\"background:#1a1a2e;padding:20px;text-align:center\"><h2 style=\"color:#fff;margin:0\">🎨 AIBS — Art International Business School</h2></div><div style=\"padding:30px\"><p>Bonjour <strong>${firstName}</strong>,</p><p>Votre <strong>diagnostic de carrière artistique</strong> avec l'AIBS est confirmé :</p><div style=\"background:#f5f5f5;border-left:4px solid #27ae60;padding:15px;margin:20px 0\"><strong>📅 ${dateStr}</strong></div><p>Rejoignez la réunion en cliquant ici :</p><p style=\"text-align:center\"><a href=\"${joinUrl}\" style=\"background:#27ae60;color:#fff;padding:12px 24px;text-decoration:none;border-radius:4px;display:inline-block\">Rejoindre la réunion</a></p><p style=\"font-size:12px;color:#666\">Ou copiez : ${joinUrl}</p><p>À très bientôt ! 🎨</p><p>L'équipe AIBS</p></div><div style=\"background:#f5f5f5;padding:15px;text-align:center;font-size:11px;color:#999\">Art International Business School — contact@aibs.fr</div></body></html>`\n}}];"
+      },
+      "id": "a1b2c3d4-0012-4000-8000-000000000012",
+      "name": "Préparer email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://187.124.42.7:8767/send-email",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer aibs-wa-relay-xK9mP3qR"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "response": { "response": { "neverError": true } }
+        }
+      },
+      "id": "a1b2c3d4-0013-4000-8000-000000000013",
+      "name": "Envoyer Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2220, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lmlehskymbrqxqoepuuk.supabase.co/rest/v1/contact_notes",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contact_id: $('Préparer message').item.json.contact_id, type: 'visio_confirmation', text: 'Confirmation WA+email envoyée pour visio ' + $('Préparer message').item.json.date_str + ' (event: ' + $('Préparer message').item.json.event_uuid + ')', date: new Date().toISOString() }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0010-4000-8000-000000000010",
+      "name": "Note CRM confirmation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Marquer l'event comme confirmé dans le static data\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.confirmed) staticData.confirmed = {};\nconst uuid = $('Préparer message').item.json.event_uuid;\nif (uuid) staticData.confirmed[uuid] = Date.now();\nreturn $input.all();"
+      },
+      "id": "a1b2c3d4-0011-4000-8000-000000000011",
+      "name": "Marquer confirmé",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 300]
+    }
+  ],
+  "connections": {
+    "Toutes les 5 min": {
+      "main": [[{ "node": "Fenêtre 7 jours", "type": "main", "index": 0 }]]
+    },
+    "Fenêtre 7 jours": {
+      "main": [[{ "node": "Fetch RDV Calendly", "type": "main", "index": 0 }]]
+    },
+    "Fetch RDV Calendly": {
+      "main": [[{ "node": "Filtrer nouveaux events", "type": "main", "index": 0 }]]
+    },
+    "Filtrer nouveaux events": {
+      "main": [[{ "node": "Fetch invités", "type": "main", "index": 0 }]]
+    },
+    "Fetch invités": {
+      "main": [[{ "node": "Aplatir invités", "type": "main", "index": 0 }]]
+    },
+    "Aplatir invités": {
+      "main": [[{ "node": "Chercher contact Supabase", "type": "main", "index": 0 }]]
+    },
+    "Chercher contact Supabase": {
+      "main": [[{ "node": "Préparer message", "type": "main", "index": 0 }]]
+    },
+    "Préparer message": {
+      "main": [[
+        { "node": "Envoyer WA", "type": "main", "index": 0 },
+        { "node": "Préparer email", "type": "main", "index": 0 }
+      ]]
+    },
+    "Envoyer WA": {
+      "main": [[{ "node": "Note CRM confirmation", "type": "main", "index": 0 }]]
+    },
+    "Préparer email": {
+      "main": [[{ "node": "Envoyer Email", "type": "main", "index": 0 }]]
+    },
+    "Envoyer Email": {
+      "main": [[{ "node": "Note CRM confirmation", "type": "main", "index": 0 }]]
+    },
+    "Note CRM confirmation": {
+      "main": [[{ "node": "Marquer confirmé", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

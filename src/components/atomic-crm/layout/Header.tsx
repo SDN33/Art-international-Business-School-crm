@@ -1,4 +1,4 @@
-import { BookOpen, ChevronDown, ClipboardList, CreditCard, FileText, Import, Kanban, Mail, MessageSquare, Settings, User, Users } from "lucide-react";
+import { BookOpen, ChevronDown, ClipboardList, CreditCard, FileText, Import, Inbox, Kanban, Mail, MessageSquare, Send, Settings, User, Users } from "lucide-react";
 import { CanAccess, useTranslate, useUserMenu } from "ra-core";
 import { Link, matchPath, useLocation } from "react-router";
 import { RefreshButton } from "@/components/admin/refresh-button";
@@ -36,6 +36,12 @@ const Header = () => {
     matchPath("/newsletter_subscribers/*", location.pathname)
   ) {
     currentPath = "/pipeline";
+  } else if (
+    matchPath("/emails/*", location.pathname) ||
+    matchPath("/email-campaigns/*", location.pathname) ||
+    matchPath("/email-inbox", location.pathname)
+  ) {
+    currentPath = "/emails";
   } else if (
     matchPath("/paiements/*", location.pathname) ||
     matchPath("/taches", location.pathname) ||
@@ -78,6 +84,7 @@ const Header = () => {
                   <FormationDropdown isActive={currentPath === "/formations"} />
                   <PipelineDropdown isActive={currentPath === "/pipeline"} />
                   <SuiviDropdown isActive={currentPath === "/suivi"} />
+                  <EmailsDropdown isActive={currentPath === "/emails"} />
                 </nav>
               </div>
               <div className="flex items-center">
@@ -249,6 +256,42 @@ const SuiviDropdown = ({ isActive }: { isActive: boolean }) => (
         <Link to="/documents" className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-muted-foreground" />
           Documents
+        </Link>
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
+);
+
+const EmailsDropdown = ({ isActive }: { isActive: boolean }) => (
+  <DropdownMenu>
+    <DropdownMenuTrigger
+      className={`flex items-center gap-1 px-6 py-3 text-sm font-medium transition-colors border-b-2 cursor-pointer ${
+        isActive
+          ? "text-secondary-foreground border-secondary-foreground"
+          : "text-secondary-foreground/70 border-transparent hover:text-secondary-foreground/80"
+      }`}
+    >
+      <Mail className="h-4 w-4" />
+      Emails
+      <ChevronDown className="h-3 w-3" />
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="start">
+      <DropdownMenuItem asChild>
+        <Link to="/emails" className="flex items-center gap-2">
+          <Inbox className="h-4 w-4 text-muted-foreground" />
+          Boîte de réception
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <Link to="/emails" className="flex items-center gap-2">
+          <Mail className="h-4 w-4 text-muted-foreground" />
+          Emails envoyés
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <Link to="/emails" className="flex items-center gap-2">
+          <Send className="h-4 w-4 text-muted-foreground" />
+          Campagnes
         </Link>
       </DropdownMenuItem>
     </DropdownMenuContent>
