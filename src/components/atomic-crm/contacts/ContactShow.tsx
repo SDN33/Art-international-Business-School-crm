@@ -35,6 +35,7 @@ import { LeadTemperatureBadge } from "./LeadTemperatureBadge";
 import { MobileBackButton } from "../misc/MobileBackButton";
 import { SendEmailButton } from "../emails/SendEmailButton";
 import { ReceivedEmailsContact } from "../emails/ReceivedEmailsContact";
+import { ContactInteractionsFeed } from "../pipeline/ContactInteractionsFeed";
 
 export const ContactShow = (props: ShowBaseProps = {}) => {
   const isMobile = useIsMobile();
@@ -137,10 +138,11 @@ const ContactShowContentMobile = () => {
         </div>
 
         <Tabs defaultValue="notes" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 h-10">
+          <TabsList className="grid w-full grid-cols-5 h-10">
             <TabsTrigger value="notes">
               {translate("resources.notes.name", { smart_count: 2 })}
             </TabsTrigger>
+            <TabsTrigger value="exchanges">Échanges</TabsTrigger>
             <TabsTrigger value="tasks">
               {translate("crm.common.task_count", {
                 smart_count: taskCount ?? 0,
@@ -184,6 +186,10 @@ const ContactShowContentMobile = () => {
             >
               <NotesIteratorMobile contactId={record.id} showStatus />
             </ReferenceManyField>
+          </TabsContent>
+
+          <TabsContent value="exchanges" className="mt-2">
+            <ContactInteractionsFeed contactId={record.id} />
           </TabsContent>
 
           <TabsContent value="tasks" className="mt-4">
@@ -325,6 +331,14 @@ const ContactShowContent = () => {
             >
               <NotesIterator reference="contacts" showStatus />
             </ReferenceManyField>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
+              Échanges
+            </h3>
+            <ContactInteractionsFeed contactId={record.id} />
           </CardContent>
         </Card>
         <Card>

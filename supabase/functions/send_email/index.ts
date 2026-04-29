@@ -3,6 +3,7 @@ import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { AuthMiddleware, UserMiddleware } from "../_shared/authentication.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { wrapBrandedEmail } from "../_shared/emailTemplate.ts";
 import type { User } from "jsr:@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -54,6 +55,13 @@ async function handler(req: Request, user?: User): Promise<Response> {
     ? html.replace(/\{\{prenom\}\}/gi, first_name).replace(/\{\{first_name\}\}/gi, first_name)
     : html;
 
+  // Wrap with the AIBS branded template (DA inspired by artaibs.fr)
+  const brandedHtml = wrapBrandedEmail({
+    bodyHtml: personalizedHtml,
+    firstName: first_name ?? null,
+    preheader: subject,
+  });
+
   // Call Resend API
   let resend_id: string | null = null;
   let sendStatus = "sent";
@@ -70,7 +78,7 @@ async function handler(req: Request, user?: User): Promise<Response> {
         from: FROM_EMAIL,
         to: [to],
         subject,
-        html: personalizedHtml,
+        html: brandedHtml,
       }),
     });
 

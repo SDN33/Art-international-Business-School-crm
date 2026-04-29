@@ -32,18 +32,24 @@ const TYPE_OPTIONS = [
   "Appel téléphonique",
   "Email",
   "Message WhatsApp",
+  "Contact sortant Bot",
+  "Message entrant",
   "Réunion en ligne",
   "Réunion présentiel",
+  "Note de suivi",
 ];
-const CANAL_OPTIONS = ["Téléphone", "Email", "WhatsApp", "Zoom", "Présentiel"];
-const STATUT_OPTIONS = ["À faire", "Fait", "En attente"];
+const CANAL_OPTIONS = ["Téléphone", "Email", "WhatsApp", "Zoom", "Présentiel", "Bot"];
+const STATUT_OPTIONS = ["À faire", "Fait", "En attente", "Envoyé"];
 
 const TYPE_COLORS: Record<string, string> = {
   "Appel téléphonique": "bg-blue-100 text-blue-700",
   Email: "bg-purple-100 text-purple-700",
   "Message WhatsApp": "bg-green-100 text-green-700",
+  "Contact sortant Bot": "bg-indigo-100 text-indigo-700",
+  "Message entrant": "bg-teal-100 text-teal-700",
   "Réunion en ligne": "bg-yellow-100 text-yellow-700",
   "Réunion présentiel": "bg-orange-100 text-orange-700",
+  "Note de suivi": "bg-gray-100 text-gray-700",
 };
 
 const STATUT_COLORS: Record<string, string> = {

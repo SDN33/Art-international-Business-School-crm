@@ -3,6 +3,7 @@ import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { AuthMiddleware, UserMiddleware } from "../_shared/authentication.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { wrapBrandedEmail } from "../_shared/emailTemplate.ts";
 import type { User } from "jsr:@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -18,6 +19,12 @@ async function sendOneEmail(
     ? html.replace(/\{\{prenom\}\}/gi, firstName).replace(/\{\{first_name\}\}/gi, firstName)
     : html;
 
+  const brandedHtml = wrapBrandedEmail({
+    bodyHtml: personalizedHtml,
+    firstName: firstName ?? null,
+    preheader: subject,
+  });
+
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -25,7 +32,7 @@ async function sendOneEmail(
         Authorization: `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html: personalizedHtml }),
+      body: JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html: brandedHtml }),
     });
     const data = await res.json();
     if (!res.ok) {
