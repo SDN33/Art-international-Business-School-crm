@@ -131,14 +131,34 @@ def log_interaction(contact_id, message, formation_label):
     return status in (200, 201)
 
 def log_contact_note(contact_id, formation_label):
+    note_text = f"[BOT] Formation: {formation_label or 'À préciser'} | Issue: Contacté WA | Détails: premier contact envoyé par Léo"
     body = {
         "contact_id": contact_id,
         "sales_id": SALES_BOT_ID,
         "status": "warm",
-        "text": f"[BOT] Formation: {formation_label or 'À préciser'} | Issue: Contacté WA | Détails: premier contact envoyé par Léo",
+        "text": note_text,
         "date": datetime.datetime.now(datetime.UTC).isoformat(),
     }
     status, _ = post_json(f"{SB_URL}/rest/v1/contact_notes", body)
+    ok = status in (200, 201)
+    if ok:
+        # Mirror la note dans interactions (type WhatsApp) pour apparaître dans le feed Échanges
+        _mirror_note_as_whatsapp_interaction(contact_id, note_text, formation_label)
+    return ok
+
+def _mirror_note_as_whatsapp_interaction(contact_id, note_text, formation_label):
+    now_iso = datetime.datetime.now(datetime.UTC).isoformat()
+    body = {
+        "contact_id": contact_id,
+        "date_heure": now_iso,
+        "type_interaction": "WhatsApp",
+        "titre": f"Note bot — {formation_label or 'Formation AIBS'}",
+        "message": note_text,
+        "canal": "WhatsApp",
+        "statut_suivi": "Envoyé",
+        "responsable": "Léo (Bot AIBS)",
+    }
+    status, _ = post_json(f"{SB_URL}/rest/v1/interactions", body)
     return status in (200, 201)
 
 def send_wa(phone, message):
