@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { InputProps } from "ra-core";
-import { useGetIdentity, useListContext, useTranslate } from "ra-core";
+import { useGetIdentity, useListContext, useListController, useTranslate } from "ra-core";
 import { matchPath, useLocation } from "react-router";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { CreateButton } from "@/components/admin/create-button";
@@ -10,6 +10,14 @@ import { ReferenceInput } from "@/components/admin/reference-input";
 import { FilterButton } from "@/components/admin/filter-form";
 import { SearchInput } from "@/components/admin/search-input";
 import { SelectInput } from "@/components/admin/select-input";
+import { DateInput } from "@/components/admin/date-input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { TopToolbar } from "../layout/TopToolbar";
@@ -48,6 +56,8 @@ const DealList = () => {
       />
     </WrapperField>,
     <OnlyMineInput source="sales_id" alwaysOn />,
+    <DateInput source="created_at@gte" label="Créé depuis" />,
+    <DateInput source="created_at@lte" label="Créé jusqu'au" />,
   ];
 
   return (
@@ -97,8 +107,43 @@ const DealLayout = () => {
   );
 };
 
+const SORT_OPTIONS = [
+  { value: "index", order: "DESC", label: "Position (défaut)" },
+  { value: "created_at", order: "DESC", label: "Date création ↓" },
+  { value: "created_at", order: "ASC", label: "Date création ↑" },
+  { value: "updated_at", order: "DESC", label: "Mis à jour récemment" },
+  { value: "amount", order: "DESC", label: "Montant ↓" },
+  { value: "expected_closing_date", order: "ASC", label: "Clôture prévue ↑" },
+];
+
+const DealSortSelect = () => {
+  const { sort, setSort } = useListController();
+  const currentKey = `${sort.field}:${sort.order}`;
+  return (
+    <Select
+      value={currentKey}
+      onValueChange={(val) => {
+        const [field, order] = val.split(":");
+        setSort({ field, order: order as "ASC" | "DESC" });
+      }}
+    >
+      <SelectTrigger className="h-8 text-xs w-44">
+        <SelectValue placeholder="Trier par…" />
+      </SelectTrigger>
+      <SelectContent>
+        {SORT_OPTIONS.map((opt) => (
+          <SelectItem key={`${opt.value}:${opt.order}`} value={`${opt.value}:${opt.order}`} className="text-xs">
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
+
 const DealActions = () => (
   <TopToolbar>
+    <DealSortSelect />
     <FilterButton />
     <ExportButton />
     <ManageColumnsDialog />

@@ -88,13 +88,17 @@ export const SendEmailDialog = ({
               id="email-body"
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder={`Bonjour {{prenom}},\n\n...`}
-              rows={8}
-              className="resize-none"
+              placeholder={`Bonjour {{prenom}},\n\nNous avons le plaisir de vous présenter…\n\nÀ très vite,\nL'équipe AIBS`}
+              rows={10}
+              className="resize-none font-[450]"
             />
-            <p className="text-xs text-muted-foreground">
-              Utilisez <code>{"{{prenom}}"}</code> pour personnaliser le message.
-              Expéditeur : <strong>noreply@artaibs.fr</strong>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Tapez votre message en texte simple — il sera automatiquement habillé
+              avec la <strong>charte AIBS</strong> (logo, signature, certifications
+              Qualiopi/AFDAS, liens sociaux).
+              <br />
+              Variable disponible : <code>{"{{prenom}}"}</code>. Expéditeur :{" "}
+              <strong>noreply@artaibs.fr</strong>.
             </p>
           </div>
         </div>

@@ -43,17 +43,20 @@ import {
   Users,
   Eye,
   ChevronLeft,
+  Clock,
 } from "lucide-react";
 import type { CrmDataProvider } from "../providers/types";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-gray-100 text-gray-700",
+  scheduled: "bg-blue-100 text-blue-700",
   sending: "bg-yellow-100 text-yellow-700",
   sent: "bg-green-100 text-green-700",
   failed: "bg-red-100 text-red-700",
 };
 const STATUS_LABELS: Record<string, string> = {
   draft: "Brouillon",
+  scheduled: "Planifiée",
   sending: "Envoi en cours…",
   sent: "Envoyée",
   failed: "Erreur",
@@ -66,6 +69,7 @@ type Campaign = {
   html_body: string;
   status: string;
   sent_at: string | null;
+  scheduled_at: string | null;
   total_sent: number;
   total_error: number;
   created_at: string;
@@ -78,7 +82,7 @@ type Contact = {
   email_jsonb: { email: string; type: string }[];
 };
 
-const emptyForm = { name: "", subject: "", html_body: "" };
+const emptyForm = { name: "", subject: "", html_body: "", scheduled_at: "" };
 
 export const EmailCampaignList = () => {
   const notify = useNotify();
@@ -103,13 +107,20 @@ export const EmailCampaignList = () => {
 
   const handleCreate = async () => {
     if (!form.name || !form.subject || !form.html_body) return;
+    const isScheduled = !!form.scheduled_at && new Date(form.scheduled_at) > new Date();
     try {
       await create(
         "email_campaigns",
-        { data: { ...form, status: "draft" } },
+        {
+          data: {
+            ...form,
+            scheduled_at: form.scheduled_at || null,
+            status: isScheduled ? "scheduled" : "draft",
+          },
+        },
         { returnPromise: true },
       );
-      notify("Campagne créée", { type: "success" });
+      notify(isScheduled ? "Campagne planifiée" : "Brouillon créé", { type: "success" });
       setCreateOpen(false);
       setForm(emptyForm);
       refresh();
@@ -199,7 +210,9 @@ export const EmailCampaignList = () => {
                     : "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
-                  {c.sent_at
+                  {c.status === "scheduled" && c.scheduled_at
+                    ? <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(c.scheduled_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</span>
+                    : c.sent_at
                     ? new Date(c.sent_at).toLocaleDateString("fr-FR")
                     : new Date(c.created_at).toLocaleDateString("fr-FR")}
                 </TableCell>
@@ -225,6 +238,17 @@ export const EmailCampaignList = () => {
                         onClick={() => handleSend(c)}
                       >
                         <Send className="h-4 w-4 text-primary" />
+                      </Button>
+                    )}
+                    {c.status === "scheduled" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="Envoyer maintenant"
+                        disabled={sending}
+                        onClick={() => handleSend(c)}
+                      >
+                        <Send className="h-4 w-4 text-blue-500" />
                       </Button>
                     )}
                     <Button
@@ -282,6 +306,22 @@ export const EmailCampaignList = () => {
                 Expéditeur : <strong>noreply@artaibs.fr</strong>
               </p>
             </div>
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" />
+                Planifier l'envoi <span className="text-muted-foreground font-normal">(optionnel)</span>
+              </Label>
+              <input
+                type="datetime-local"
+                value={form.scheduled_at}
+                min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
+                onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+              <p className="text-xs text-muted-foreground">
+                Si renseigné, la campagne passera en statut <strong>Planifiée</strong>. Laissez vide pour rester en brouillon.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
@@ -291,7 +331,9 @@ export const EmailCampaignList = () => {
               onClick={handleCreate}
               disabled={!form.name || !form.subject || !form.html_body}
             >
-              Créer le brouillon
+              {form.scheduled_at && new Date(form.scheduled_at) > new Date()
+                ? <><Clock className="h-4 w-4 mr-2" />Planifier</>
+                : "Créer le brouillon"}
             </Button>
           </DialogFooter>
         </DialogContent>

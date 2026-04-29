@@ -85,6 +85,7 @@ def map_lead(lead, form_name=""):
     last  = lead.get("last_name")  or fields.get("last_name")  or fields.get("nom")    or split_last  or ""
     email = lead.get("email")      or fields.get("email")      or fields.get("e-mail") or fields.get("mail") or ""
     phone = (fields.get("phone_number") or fields.get("telephone") or
+             fields.get("numero_de_telephone") or fields.get("numéro_de_téléphone") or
              fields.get("mobile") or lead.get("phone_number") or "")
 
     raw_form = form_name or fields.get("formation_souhaitee") or fields.get("formation") or ""
