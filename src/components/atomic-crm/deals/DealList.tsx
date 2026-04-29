@@ -65,7 +65,7 @@ const DealList = () => {
       perPage={1000}
       filter={{ "archived_at@is": null }}
       title={false}
-      sort={{ field: "index", order: "DESC" }}
+      sort={{ field: "created_at", order: "DESC" }}
       filters={dealFilters}
       actions={<DealActions />}
       pagination={null}
@@ -108,12 +108,12 @@ const DealLayout = () => {
 };
 
 const SORT_OPTIONS = [
-  { value: "index", order: "DESC", label: "Position (défaut)" },
-  { value: "created_at", order: "DESC", label: "Date création ↓" },
-  { value: "created_at", order: "ASC", label: "Date création ↑" },
-  { value: "updated_at", order: "DESC", label: "Mis à jour récemment" },
+  { value: "created_at", order: "DESC", label: "Ajout récent → ancien" },
+  { value: "created_at", order: "ASC", label: "Ajout ancien → récent" },
+  { value: "updated_at", order: "DESC", label: "Modifié récemment" },
   { value: "amount", order: "DESC", label: "Montant ↓" },
   { value: "expected_closing_date", order: "ASC", label: "Clôture prévue ↑" },
+  { value: "index", order: "DESC", label: "Position Kanban" },
 ];
 
 const DealSortSelect = () => {
