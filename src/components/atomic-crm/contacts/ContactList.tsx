@@ -43,7 +43,7 @@ export const ContactList = () => {
       title={false}
       actions={<ContactListActions />}
       perPage={25}
-      sort={{ field: "last_seen", order: "DESC" }}
+      sort={{ field: "first_seen", order: "DESC" }}
       exporter={exporter}
     >
       <ContactListLayoutDesktop />
@@ -86,7 +86,7 @@ const ContactBulkActionButtons = () => (
 
 const ContactListActions = () => (
   <TopToolbar>
-    <SortButton fields={["first_name", "last_name", "last_seen"]} />
+    <SortButton fields={["first_seen", "first_name", "last_name", "last_seen"]} />
     <ContactImportButton />
     <ExportButton exporter={exporter} />
     <CreateButton />

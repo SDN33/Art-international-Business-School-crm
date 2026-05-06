@@ -161,9 +161,27 @@ def _mirror_note_as_whatsapp_interaction(contact_id, note_text, formation_label)
     status, _ = post_json(f"{SB_URL}/rest/v1/interactions", body)
     return status in (200, 201)
 
+def normalize_phone(phone):
+    raw = (phone or "").strip().replace(" ", "").replace(".", "").replace("-", "")
+    if raw.startswith("00"):
+        return "+" + raw[2:]
+    if raw.startswith("0") and len(raw) == 10:
+        return "+33" + raw[1:]
+    return raw
+
+def parse_error_body(error):
+    body = error.read()
+    if not body:
+        return {}
+    text = body.decode("utf-8", errors="replace")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return {"status": error.code, "body": text[:500]}
+
 def send_wa(phone, message):
     """Envoie via wa-relay (http://localhost:8767/send)"""
-    data = json.dumps({"phone": phone, "message": message}).encode()
+    data = json.dumps({"phone": normalize_phone(phone), "message": message}).encode()
     req = urllib.request.Request(
         WA_RELAY_URL,
         data=data,
@@ -178,7 +196,7 @@ def send_wa(phone, message):
             resp = json.loads(r.read())
             return True, resp
     except urllib.error.HTTPError as e:
-        return False, json.loads(e.read()) if e.read() else {}
+        return False, parse_error_body(e)
     except Exception as e:
         return False, {"error": str(e)}
 
@@ -293,11 +311,11 @@ def main():
         if prenom.isupper() or prenom.islower():
             prenom = prenom.capitalize()
 
-        phone = c["phone_jsonb"][0]["number"]
+        phone = normalize_phone(c["phone_jsonb"][0]["number"])
         formation_souhaitee = c.get("formation_souhaitee") or ""
         slug = c.get("formation_slug") or infer_slug(formation_souhaitee)
         formation_label = FORMATION_SLUG_MAP.get(slug, formation_souhaitee or "Formation AIBS")
-        first_seen = c.get("first_seen", "")[:10]
+        first_seen = (c.get("first_seen") or "")[:10] or "inconnue"
 
         # Anti-doublon : vérifier que le contact n'est PAS déjà "Contacté WA"
         check = get_json(f"{SB_URL}/rest/v1/contacts?id=eq.{contact_id}&select=pipeline_status&limit=1")
