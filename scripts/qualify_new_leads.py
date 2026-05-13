@@ -24,17 +24,22 @@ import sys
 import time
 import subprocess
 import os
+from pathlib import Path
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 SB_URL = "https://lmlehskymbrqxqoepuuk.supabase.co"
 SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os"
 WA_RELAY_URL = "http://localhost:8767/send"
 WA_RELAY_TOKEN = "aibs-wa-relay-xK9mP3qR"
+CALENDLY_URL = "https://calendly.com/caroline-art-aibs/30min"
 SALES_BOT_ID = 2          # sales id pour les notes bot
-MAX_PER_RUN = 6           # leads max par exécution (warm-up sécurité)
-DAILY_MAX = 30            # warm-up jour 13+ = 30/jour
-BASE_DELAY = 180          # secondes entre envois (3 min ± 60s)
+MAX_PER_RUN = 3           # leads max par exécution (warm-up sécurité)
+FOLLOWUP_MAX_PER_RUN = 2  # relances Calendly max par exécution
+DAILY_MAX = 15            # limite prudente pour réduire le risque de ban
+BASE_DELAY = 300          # secondes entre envois (5 min ± 90s)
 PARIS_TZ_OFFSET = 2       # CEST UTC+2 en avril 2026
+WA_CIRCUIT_FILE = Path("/var/tmp/aibs-wa-circuit-open.json")
+WA_CIRCUIT_SECONDS = 60 * 60
 
 # ─── Ice breakers par formation ───────────────────────────────────────────────
 ICE_BREAKERS = {
@@ -87,6 +92,39 @@ FORMATION_SLUG_MAP = {
 def log(msg):
     ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{ts}] {msg}", flush=True)
+
+def wa_circuit_open():
+    try:
+        data = json.loads(WA_CIRCUIT_FILE.read_text())
+        until = float(data.get("until", 0))
+        if time.time() < until:
+            remaining = int((until - time.time()) / 60) + 1
+            log(f"Circuit WhatsApp ouvert encore ~{remaining} min ({data.get('reason', 'raison inconnue')}) — STOP")
+            return True
+        WA_CIRCUIT_FILE.unlink(missing_ok=True)
+    except FileNotFoundError:
+        return False
+    except Exception:
+        return False
+    return False
+
+def open_wa_circuit(reason, seconds=WA_CIRCUIT_SECONDS):
+    payload = {"until": time.time() + seconds, "reason": str(reason)[:240]}
+    try:
+        WA_CIRCUIT_FILE.write_text(json.dumps(payload))
+    except Exception:
+        pass
+
+def is_transport_failure(resp):
+    text = json.dumps(resp, ensure_ascii=False).lower()
+    return any(marker in text for marker in [
+        "not linked",
+        "no active whatsapp web listener",
+        "timeout",
+        "timed out",
+        "whatsapp not linked",
+        "openclaw status timeout",
+    ])
 
 def sb_headers():
     return {
@@ -209,6 +247,21 @@ def get_ice_breaker(slug, prenom, last_variant):
     idx = random.choice(available)
     return options[idx].format(prenom=prenom), idx
 
+def with_calendly_cta(message):
+    return (
+        f"{message}\n\n"
+        f"Pour avancer plus vite, tu peux réserver ton diagnostic gratuit ici : {CALENDLY_URL}\n"
+        "Sinon réponds-moi directement ici avec ta formation + ta situation financement, je t'oriente."
+    )
+
+def calendly_followup_message(prenom, formation_label):
+    return (
+        f"Bonjour {prenom}, c'est Léo de AIBS. Je te remets le lien pour réserver ton diagnostic gratuit "
+        f"sur {formation_label or 'ta formation'} :\n{CALENDLY_URL}\n\n"
+        "Le créneau sert à vérifier la bonne formation, ton financement possible et les prochaines dates. "
+        "Si tu préfères, réponds ici avec tes disponibilités et je t'aide."
+    )
+
 def infer_slug(formation_souhaitee):
     if not formation_souhaitee:
         return "default"
@@ -249,9 +302,94 @@ def count_contacted_today():
         except Exception:
             return 0
 
+def fetch_calendly_followups(limit):
+    sql = f"""
+        SELECT c.id, c.first_name, c.phone_jsonb, c.formation_souhaitee, c.formation_slug
+        FROM contacts c
+        WHERE c.pipeline_status = 'Contacté WA'
+          AND COALESCE(c.calendly_reserved, false) = false
+          AND c.phone_jsonb IS NOT NULL
+          AND c.phone_jsonb != '[]'::jsonb
+          AND c.phone_jsonb->0->>'number' != ''
+          AND EXISTS (
+            SELECT 1 FROM interactions i
+            WHERE i.contact_id = c.id
+              AND i.type_interaction = 'Contact sortant Bot'
+              AND i.created_at <= now() - interval '20 hours'
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM interactions i
+            WHERE i.contact_id = c.id
+              AND i.type_interaction = 'Relance Calendly Bot'
+              AND i.created_at >= now() - interval '48 hours'
+          )
+        ORDER BY c.first_seen DESC NULLS LAST
+        LIMIT {int(limit)}
+    """
+    payload = json.dumps({"query_text": sql}).encode()
+    req = urllib.request.Request(
+        f"{SB_URL}/rest/v1/rpc/exec_sql",
+        data=payload,
+        headers={**sb_headers()},
+        method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read())
+
+def send_calendly_followups(limit):
+    if limit <= 0:
+        return 0, 0
+
+    contacts = fetch_calendly_followups(min(FOLLOWUP_MAX_PER_RUN, limit))
+    if not contacts:
+        log("Aucune relance Calendly à envoyer")
+        return 0, 0
+
+    log(f"Relances Calendly à envoyer : {len(contacts)}")
+    sent = 0
+    errors = 0
+    for c in contacts:
+        contact_id = c["id"]
+        prenom = (c.get("first_name") or "").strip() or "toi"
+        if prenom.isupper() or prenom.islower():
+            prenom = prenom.capitalize()
+        phone = normalize_phone(c["phone_jsonb"][0]["number"])
+        slug = c.get("formation_slug") or infer_slug(c.get("formation_souhaitee") or "")
+        formation_label = FORMATION_SLUG_MAP.get(slug, c.get("formation_souhaitee") or "Formation AIBS")
+        message = calendly_followup_message(prenom, formation_label)
+
+        log(f"  → relance Calendly id={contact_id} {prenom} | tel={phone}")
+        ok, resp = send_wa(phone, message)
+        if not ok:
+            log(f"    ❌ Relance Calendly échouée: {resp}")
+            if is_transport_failure(resp):
+                open_wa_circuit(resp)
+            errors += 1
+            break
+
+        patch_contact(contact_id, {
+            "last_seen": datetime.datetime.now(datetime.UTC).isoformat(),
+            "lien_calendly": CALENDLY_URL,
+            "qualification_bot": True,
+        })
+        log_interaction(contact_id, message, formation_label)
+        log_contact_note(contact_id, f"Relance Calendly envoyée — {formation_label}")
+        log("    ✅ Relance Calendly envoyée + CRM mis à jour")
+        sent += 1
+
+        if sent < len(contacts):
+            delay = BASE_DELAY + random.randint(-90, 90)
+            log(f"    ⏳ Pause {delay}s…")
+            time.sleep(delay)
+
+    return sent, errors
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 def main():
     log("=== Qualification leads AIBS — démarrage ===")
+
+    if wa_circuit_open():
+        sys.exit(0)
 
     # 1. Vérification heure Paris
     paris_hour = get_paris_hour()
@@ -325,12 +463,18 @@ def main():
 
         # Construire le message
         message, last_variant = get_ice_breaker(slug, prenom, last_variant)
+        message = with_calendly_cta(message)
 
         log(f"  → id={contact_id} {prenom} | formation={formation_label} | tel={phone} | depuis={first_seen}")
         log(f"    Message: {message[:80]}…")
 
         # PATCH pipeline_status AVANT envoi (règle SOUL.md)
-        if not patch_contact(contact_id, {"pipeline_status": "Contacté WA", "last_seen": datetime.datetime.now(datetime.UTC).isoformat()}):
+        if not patch_contact(contact_id, {
+            "pipeline_status": "Contacté WA",
+            "last_seen": datetime.datetime.now(datetime.UTC).isoformat(),
+            "lien_calendly": CALENDLY_URL,
+            "qualification_bot": True,
+        }):
             log(f"    ❌ PATCH CRM échoué — STOP (sécurité)")
             errors += 1
             break
@@ -339,6 +483,8 @@ def main():
         ok, resp = send_wa(phone, message)
         if not ok:
             log(f"    ❌ Envoi WA échoué: {resp} — STOP TOTAL (règle warm-up)")
+            if is_transport_failure(resp):
+                open_wa_circuit(resp)
             # Rollback pipeline_status
             patch_contact(contact_id, {"pipeline_status": "Nouveau lead"})
             errors += 1
@@ -357,7 +503,7 @@ def main():
 
         # Délai anti-spam (sauf dernier)
         if sent < to_send and c != contacts[-1]:
-            delay = BASE_DELAY + random.randint(-60, 60)
+            delay = BASE_DELAY + random.randint(-90, 90)
             log(f"    ⏳ Pause {delay}s…")
             time.sleep(delay)
 
@@ -365,6 +511,11 @@ def main():
     log(f"  Envoyés  : {sent}")
     log(f"  Erreurs  : {errors}")
     log(f"  Quota restant demain : {remaining_quota - sent}/{DAILY_MAX}")
+
+    if errors == 0 and remaining_quota - sent > 0:
+        followup_sent, followup_errors = send_calendly_followups(remaining_quota - sent)
+        log(f"  Relances Calendly : {followup_sent}")
+        errors += followup_errors
 
     if errors > 0:
         sys.exit(1)
