@@ -15,6 +15,8 @@ import subprocess
 import os
 import smtplib
 import logging
+import time
+from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -22,6 +24,11 @@ from email.mime.text import MIMEText
 RELAY_TOKEN = "aibs-wa-relay-xK9mP3qR"
 PORT = 8767
 NODE_PATH = "/root/.nvm/versions/node/v22.22.2/bin"
+OPENCLAW_CONFIG_PATH = "/root/.openclaw2/openclaw.json"
+OPENCLAW_STATE_DIR = "/root/.openclaw2/state"
+WA_CIRCUIT_FILE = Path("/var/tmp/aibs-wa-relay-circuit-open.json")
+WA_CIRCUIT_SECONDS = 30 * 60
+ADMIN_COPY_PHONE = "+33664833292"
 
 # SMTP — configurer via env vars quand le domaine est prêt:
 # export SMTP_HOST=smtp.postmarkapp.com SMTP_PORT=587
@@ -43,6 +50,76 @@ logging.basicConfig(
     ],
 )
 log = logging.getLogger("wa-relay")
+
+
+def _openclaw_env():
+    return {
+        **os.environ,
+        "PATH": f"{NODE_PATH}:{os.environ.get('PATH', '')}",
+        "OPENCLAW_CONFIG_PATH": OPENCLAW_CONFIG_PATH,
+        "OPENCLAW_STATE_DIR": OPENCLAW_STATE_DIR,
+    }
+
+
+def wa_circuit_open():
+    try:
+        data = json.loads(WA_CIRCUIT_FILE.read_text())
+        until = float(data.get("until", 0))
+        if time.time() < until:
+            return True, data.get("reason", "whatsapp temporarily blocked")
+        WA_CIRCUIT_FILE.unlink(missing_ok=True)
+    except FileNotFoundError:
+        return False, ""
+    except Exception:
+        return False, ""
+    return False, ""
+
+
+def open_wa_circuit(reason, seconds=WA_CIRCUIT_SECONDS):
+    try:
+        WA_CIRCUIT_FILE.write_text(json.dumps({"until": time.time() + seconds, "reason": str(reason)[:240]}))
+    except Exception:
+        pass
+
+
+def is_transport_failure(text):
+    lowered = (text or "").lower()
+    return any(marker in lowered for marker in [
+        "not linked",
+        "no active whatsapp web listener",
+        "timed out",
+        "timeout",
+        "rate limit",
+        "temporarily blocked",
+    ])
+
+
+def _send_openclaw(phone, message):
+    return subprocess.run(
+        [
+            "openclaw",
+            "message",
+            "send",
+            "--channel",
+            "whatsapp",
+            "-t",
+            phone,
+            "-m",
+            message,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        env=_openclaw_env(),
+    )
+
+
+def _admin_copy_message(phone, message):
+    return (
+        "[AIBS COPIE BOT]\n"
+        f"Destinataire original : {phone}\n\n"
+        f"{message}"
+    )[:4096]
 
 
 class WARelayHandler(BaseHTTPRequestHandler):
@@ -111,33 +188,35 @@ class WARelayHandler(BaseHTTPRequestHandler):
         if len(message) > 4096:
             message = message[:4093] + "..."
 
-        env = {**os.environ, "PATH": f"{NODE_PATH}:{os.environ.get('PATH', '')}"}
+        circuit_open, reason = wa_circuit_open()
+        if circuit_open:
+            log.warning(f"WA circuit open, blocked send to {phone}: {reason}")
+            self._respond(503, {"ok": False, "error": reason, "retry_after_seconds": WA_CIRCUIT_SECONDS})
+            return
+
         try:
-            result = subprocess.run(
-                [
-                    "openclaw",
-                    "message",
-                    "send",
-                    "--channel",
-                    "whatsapp",
-                    "-t",
-                    phone,
-                    "-m",
-                    message,
-                ],
-                capture_output=True,
-                text=True,
-                timeout=30,
-                env=env,
-            )
+            result = _send_openclaw(phone, message)
             if result.returncode == 0:
                 log.info(f"WA sent to {phone}: {message[:60]}…")
+                if phone != ADMIN_COPY_PHONE:
+                    copy_result = _send_openclaw(ADMIN_COPY_PHONE, _admin_copy_message(phone, message))
+                    if copy_result.returncode == 0:
+                        log.info(f"WA admin copy sent for {phone} to {ADMIN_COPY_PHONE}")
+                    else:
+                        log.warning(f"WA admin copy failed for {phone}: {(copy_result.stderr or copy_result.stdout)[:200]}")
                 self._respond(200, {"ok": True})
             else:
-                log.error(f"WA failed for {phone}: {result.stderr[:200]}")
-                self._respond(500, {"ok": False, "error": result.stderr[:200]})
+                error_text = (result.stderr or result.stdout)[:500]
+                if is_transport_failure(error_text):
+                    open_wa_circuit(error_text)
+                    log.error(f"WA transport blocked for {phone}: {error_text[:200]}")
+                    self._respond(503, {"ok": False, "error": error_text[:200], "retry_after_seconds": WA_CIRCUIT_SECONDS})
+                else:
+                    log.error(f"WA failed for {phone}: {error_text[:200]}")
+                    self._respond(500, {"ok": False, "error": error_text[:200]})
         except subprocess.TimeoutExpired:
-            self._respond(504, {"error": "openclaw timeout"})
+            open_wa_circuit("openclaw timeout")
+            self._respond(503, {"error": "openclaw timeout", "retry_after_seconds": WA_CIRCUIT_SECONDS})
         except FileNotFoundError:
             self._respond(500, {"error": "openclaw not found"})
 
