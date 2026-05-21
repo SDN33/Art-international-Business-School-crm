@@ -45,6 +45,13 @@ Formations principales : Acteur Leader, Court-métrage, Doublage & Voix-Off, Jou
 - qualification_bot indique si le bot WhatsApp a qualifié le lead
 - Les notes de contact ont des statuts de température : froid, tiède, chaud, inscrit
 
+## Infrastructure VPS (bot WA)
+- Les scripts Python du bot tournent sur le VPS `root@187.124.42.7` dans `/root/scripts/`
+- La clé API Supabase (SUPABASE_SERVICE_ROLE_KEY) est stockée dans `/root/.env.aibs` (chmod 600)
+- Pour mettre à jour la clé : `nano /root/.env.aibs` sur le VPS — aucun redéploiement nécessaire
+- Scripts principaux : `qualify_new_leads.py` (bot qualification WA), `vps_visio_reminder_2h.py` (rappels visio), `vps_send_reminders_now.py` (rappels one-shot), `meta-leads-daily-catchup.py` (import leads Meta)
+- Si une erreur 401 Supabase apparaît : vérifier/mettre à jour `SUPABASE_SERVICE_ROLE_KEY` dans `/root/.env.aibs`
+
 ## Règles
 - Réponds toujours en français.
 - Sois concis et précis.
