@@ -24,13 +24,14 @@ import sys
 import time
 import subprocess
 import os
+import urllib.parse
 from pathlib import Path
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 SB_URL = "https://lmlehskymbrqxqoepuuk.supabase.co"
 SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os"
-WA_RELAY_URL = "http://localhost:8767/send"
-WA_RELAY_TOKEN = "aibs-wa-relay-xK9mP3qR"
+WA_RELAY_URL = os.environ.get("WA_RELAY_URL", "http://localhost:8767/send")
+WA_RELAY_TOKEN = os.environ.get("WA_RELAY_TOKEN", "aibs-wa-relay-xK9mP3qR")
 CALENDLY_URL = "https://calendly.com/caroline-art-aibs/30min"
 SALES_BOT_ID = 2          # sales id pour les notes bot
 MAX_PER_RUN = 3           # leads max par exécution (warm-up sécurité)
@@ -124,6 +125,9 @@ def is_transport_failure(resp):
         "timed out",
         "whatsapp not linked",
         "openclaw status timeout",
+        "connection refused",
+        "connection reset",
+        "connection aborted",
     ])
 
 def sb_headers():
@@ -137,6 +141,18 @@ def get_json(url):
     req = urllib.request.Request(url, headers=sb_headers())
     with urllib.request.urlopen(req, timeout=20) as r:
         return json.loads(r.read())
+
+def rest_url(resource, params):
+    return f"{SB_URL}/rest/v1/{resource}?{urllib.parse.urlencode(params)}"
+
+def primary_phone(contact):
+    phones = contact.get("phone_jsonb")
+    if not isinstance(phones, list) or not phones:
+        return ""
+    first_phone = phones[0]
+    if not isinstance(first_phone, dict):
+        return ""
+    return (first_phone.get("number") or "").strip()
 
 def post_json(url, body, method="POST", extra_headers=None):
     data = json.dumps(body).encode()
@@ -153,13 +169,13 @@ def patch_contact(contact_id, fields):
     status, _ = post_json(url, fields, method="PATCH", extra_headers={"Prefer": "return=minimal"})
     return status in (200, 204)
 
-def log_interaction(contact_id, message, formation_label):
-    now_iso = datetime.datetime.now(datetime.UTC).isoformat()
+def log_interaction(contact_id, message, formation_label, interaction_type="Contact sortant Bot", title_prefix="Qualification lead WA"):
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
     body = {
         "contact_id": contact_id,
         "date_heure": now_iso,
-        "type_interaction": "Contact sortant Bot",
-        "titre": f"Qualification lead WA — {formation_label or 'Formation à préciser'}",
+        "type_interaction": interaction_type,
+        "titre": f"{title_prefix} — {formation_label or 'Formation à préciser'}",
         "message": message,
         "canal": "WhatsApp",
         "statut_suivi": "Envoyé",
@@ -175,7 +191,7 @@ def log_contact_note(contact_id, formation_label):
         "sales_id": SALES_BOT_ID,
         "status": "warm",
         "text": note_text,
-        "date": datetime.datetime.now(datetime.UTC).isoformat(),
+        "date": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
     status, _ = post_json(f"{SB_URL}/rest/v1/contact_notes", body)
     ok = status in (200, 201)
@@ -185,7 +201,7 @@ def log_contact_note(contact_id, formation_label):
     return ok
 
 def _mirror_note_as_whatsapp_interaction(contact_id, note_text, formation_label):
-    now_iso = datetime.datetime.now(datetime.UTC).isoformat()
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
     body = {
         "contact_id": contact_id,
         "date_heure": now_iso,
@@ -281,11 +297,11 @@ def infer_slug(formation_souhaitee):
     return "default"
 
 def get_paris_hour():
-    utc_hour = datetime.datetime.now(datetime.UTC).hour
+    utc_hour = datetime.datetime.now(datetime.timezone.utc).hour
     return (utc_hour + PARIS_TZ_OFFSET) % 24
 
 def count_contacted_today():
-    today = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d")
+    today = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
     url = (f"{SB_URL}/rest/v1/interactions"
            f"?type_interaction=eq.Contact%20sortant%20Bot"
            f"&canal=eq.WhatsApp"
@@ -302,39 +318,66 @@ def count_contacted_today():
         except Exception:
             return 0
 
+def has_interaction(contact_id, interaction_type, created_at_filter):
+    rows = get_json(rest_url("interactions", {
+        "contact_id": f"eq.{contact_id}",
+        "type_interaction": f"eq.{interaction_type}",
+        "created_at": created_at_filter,
+        "select": "id",
+        "limit": "1",
+    }))
+    return bool(rows)
+
+def fetch_new_leads(limit):
+    select = "id,first_name,last_name,pipeline_status,phone_jsonb,formation_souhaitee,formation_slug,first_seen"
+    status_filter = 'in.("Nouveau lead","À évaluer")'
+    contacts = []
+    offset = 0
+    page_size = max(limit * 10, 50)
+    max_scan = 1000
+
+    while len(contacts) < limit and offset < max_scan:
+        rows = get_json(rest_url("contacts", {
+            "pipeline_status": status_filter,
+            "select": select,
+            "order": "first_seen.desc.nullslast",
+            "limit": str(page_size),
+            "offset": str(offset),
+        }))
+        if not rows:
+            break
+        for contact in rows:
+            if primary_phone(contact):
+                contacts.append(contact)
+                if len(contacts) >= limit:
+                    break
+        offset += len(rows)
+
+    return contacts
+
 def fetch_calendly_followups(limit):
-    sql = f"""
-        SELECT c.id, c.first_name, c.phone_jsonb, c.formation_souhaitee, c.formation_slug
-        FROM contacts c
-        WHERE c.pipeline_status = 'Contacté WA'
-          AND COALESCE(c.calendly_reserved, false) = false
-          AND c.phone_jsonb IS NOT NULL
-          AND c.phone_jsonb != '[]'::jsonb
-          AND c.phone_jsonb->0->>'number' != ''
-          AND EXISTS (
-            SELECT 1 FROM interactions i
-            WHERE i.contact_id = c.id
-              AND i.type_interaction = 'Contact sortant Bot'
-              AND i.created_at <= now() - interval '20 hours'
-          )
-          AND NOT EXISTS (
-            SELECT 1 FROM interactions i
-            WHERE i.contact_id = c.id
-              AND i.type_interaction = 'Relance Calendly Bot'
-              AND i.created_at >= now() - interval '48 hours'
-          )
-        ORDER BY c.first_seen DESC NULLS LAST
-        LIMIT {int(limit)}
-    """
-    payload = json.dumps({"query_text": sql}).encode()
-    req = urllib.request.Request(
-        f"{SB_URL}/rest/v1/rpc/exec_sql",
-        data=payload,
-        headers={**sb_headers()},
-        method="POST"
-    )
-    with urllib.request.urlopen(req, timeout=20) as r:
-        return json.loads(r.read())
+    contacts = []
+    cutoff_first_contact = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=20)).isoformat()
+    cutoff_recent_followup = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=48)).isoformat()
+    rows = get_json(rest_url("contacts", {
+        "pipeline_status": "eq.Contacté WA",
+        "select": "id,first_name,phone_jsonb,formation_souhaitee,formation_slug,calendly_reserved,first_seen",
+        "order": "first_seen.desc.nullslast",
+        "limit": str(max(limit * 20, 50)),
+    }))
+
+    for contact in rows:
+        if len(contacts) >= limit:
+            break
+        if contact.get("calendly_reserved") or not primary_phone(contact):
+            continue
+        if not has_interaction(contact["id"], "Contact sortant Bot", f"lte.{cutoff_first_contact}"):
+            continue
+        if has_interaction(contact["id"], "Relance Calendly Bot", f"gte.{cutoff_recent_followup}"):
+            continue
+        contacts.append(contact)
+
+    return contacts
 
 def send_calendly_followups(limit):
     if limit <= 0:
@@ -353,7 +396,7 @@ def send_calendly_followups(limit):
         prenom = (c.get("first_name") or "").strip() or "toi"
         if prenom.isupper() or prenom.islower():
             prenom = prenom.capitalize()
-        phone = normalize_phone(c["phone_jsonb"][0]["number"])
+        phone = normalize_phone(primary_phone(c))
         slug = c.get("formation_slug") or infer_slug(c.get("formation_souhaitee") or "")
         formation_label = FORMATION_SLUG_MAP.get(slug, c.get("formation_souhaitee") or "Formation AIBS")
         message = calendly_followup_message(prenom, formation_label)
@@ -368,11 +411,11 @@ def send_calendly_followups(limit):
             break
 
         patch_contact(contact_id, {
-            "last_seen": datetime.datetime.now(datetime.UTC).isoformat(),
+            "last_seen": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "lien_calendly": CALENDLY_URL,
             "qualification_bot": True,
         })
-        log_interaction(contact_id, message, formation_label)
+        log_interaction(contact_id, message, formation_label, "Relance Calendly Bot", "Relance Calendly")
         log_contact_note(contact_id, f"Relance Calendly envoyée — {formation_label}")
         log("    ✅ Relance Calendly envoyée + CRM mis à jour")
         sent += 1
@@ -408,29 +451,8 @@ def main():
 
     to_send = min(MAX_PER_RUN, remaining_quota)
 
-    # 3. Récupérer les nouveaux leads avec téléphone via exec_sql (filtre SQL précis sur phone_jsonb non vide)
-    sql = f"""
-        SELECT id, first_name, last_name, pipeline_status, phone_jsonb,
-               formation_souhaitee, formation_slug, first_seen
-        FROM contacts
-        WHERE pipeline_status IN ('Nouveau lead', 'À évaluer')
-          AND phone_jsonb IS NOT NULL
-          AND phone_jsonb != '[]'::jsonb
-          AND phone_jsonb->0->>'number' != ''
-        ORDER BY first_seen DESC
-        LIMIT {to_send * 3}
-    """
-    payload = json.dumps({"query_text": sql}).encode()
-    req = urllib.request.Request(
-        f"{SB_URL}/rest/v1/rpc/exec_sql",
-        data=payload,
-        headers={**sb_headers()},
-        method="POST"
-    )
-    with urllib.request.urlopen(req, timeout=20) as r:
-        contacts = json.loads(r.read())
-
-    contacts = contacts[:to_send]
+    # 3. Récupérer les nouveaux leads avec téléphone via PostgREST.
+    contacts = fetch_new_leads(to_send)
 
     log(f"Leads à contacter : {len(contacts)}")
     if not contacts:
@@ -449,7 +471,7 @@ def main():
         if prenom.isupper() or prenom.islower():
             prenom = prenom.capitalize()
 
-        phone = normalize_phone(c["phone_jsonb"][0]["number"])
+        phone = normalize_phone(primary_phone(c))
         formation_souhaitee = c.get("formation_souhaitee") or ""
         slug = c.get("formation_slug") or infer_slug(formation_souhaitee)
         formation_label = FORMATION_SLUG_MAP.get(slug, formation_souhaitee or "Formation AIBS")
@@ -471,7 +493,7 @@ def main():
         # PATCH pipeline_status AVANT envoi (règle SOUL.md)
         if not patch_contact(contact_id, {
             "pipeline_status": "Contacté WA",
-            "last_seen": datetime.datetime.now(datetime.UTC).isoformat(),
+            "last_seen": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "lien_calendly": CALENDLY_URL,
             "qualification_bot": True,
         }):
@@ -482,11 +504,22 @@ def main():
         # Envoi WA
         ok, resp = send_wa(phone, message)
         if not ok:
+            error_text = json.dumps(resp, ensure_ascii=False).lower()
+            if "duplicate" in error_text:
+                # Le message a déjà été envoyé (duplicate guard openclaw) — traiter comme succès
+                log(f"    ⚠️  Duplicate guard (message déjà envoyé) — CRM conservé Contacté WA")
+                sent += 1
+                continue
             log(f"    ❌ Envoi WA échoué: {resp} — STOP TOTAL (règle warm-up)")
             if is_transport_failure(resp):
                 open_wa_circuit(resp)
-            # Rollback pipeline_status
-            patch_contact(contact_id, {"pipeline_status": "Nouveau lead"})
+                # Rollback pipeline_status seulement sur erreur transport
+                patch_contact(contact_id, {"pipeline_status": "Nouveau lead"})
+            else:
+                # Erreur non-transport : rollback et skip ce lead, continuer les suivants
+                patch_contact(contact_id, {"pipeline_status": "Nouveau lead"})
+                errors += 1
+                continue
             errors += 1
             break
 

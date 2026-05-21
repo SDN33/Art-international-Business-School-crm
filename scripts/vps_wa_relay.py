@@ -198,13 +198,14 @@ class WARelayHandler(BaseHTTPRequestHandler):
             result = _send_openclaw(phone, message)
             if result.returncode == 0:
                 log.info(f"WA sent to {phone}: {message[:60]}…")
+                # Répondre immédiatement avant l'admin copy pour éviter timeout côté client
+                self._respond(200, {"ok": True})
                 if phone != ADMIN_COPY_PHONE:
                     copy_result = _send_openclaw(ADMIN_COPY_PHONE, _admin_copy_message(phone, message))
                     if copy_result.returncode == 0:
                         log.info(f"WA admin copy sent for {phone} to {ADMIN_COPY_PHONE}")
                     else:
                         log.warning(f"WA admin copy failed for {phone}: {(copy_result.stderr or copy_result.stdout)[:200]}")
-                self._respond(200, {"ok": True})
             else:
                 error_text = (result.stderr or result.stdout)[:500]
                 if is_transport_failure(error_text):
