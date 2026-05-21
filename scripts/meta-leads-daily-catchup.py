@@ -13,12 +13,31 @@ import json
 import datetime
 import re
 import sys
+import os
+
+
+def _load_env_file(path="/root/.env.aibs"):
+    try:
+        with open(path) as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith("#") and "=" in _line:
+                    _k, _, _v = _line.partition("=")
+                    os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
+    except FileNotFoundError:
+        pass
+
+
+_load_env_file()
 
 # ─── Configuration ──────────────────────────────────────────────────────────
-META_TOKEN = "EAANTSPOSqsoBRO6q9abZCk3qvzDrIs1j69mhkWnqYsnrFgsK7mo3MCGeeRuYC3XelVoOiE0XeYEQUwBZBIyxCQ10k24IZCyu6CQ5MQx7qxYVXTmSiG4ZCo2r4yY34axy7BBC7ae0ghi9c94U4XX8HTPLXTNtdh1jRHbP7KkJvSmrNzfoFBKeZCg6URlDGodPuYzAP1ghx"
+META_TOKEN = os.environ.get("META_TOKEN", "EAANTSPOSqsoBRO6q9abZCk3qvzDrIs1j69mhkWnqYsnrFgsK7mo3MCGeeRuYC3XelVoOiE0XeYEQUwBZBIyxCQ10k24IZCyu6CQ5MQx7qxYVXTmSiG4ZCo2r4yY34axy7BBC7ae0ghi9c94U4XX8HTPLXTNtdh1jRHbP7KkJvSmrNzfoFBKeZCg6URlDGodPuYzAP1ghx")
 PAGE_ID = "750136721524800"
 SUPABASE_URL = "https://lmlehskymbrqxqoepuuk.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os"
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+if not SUPABASE_KEY:
+    print("ERREUR CRITIQUE : SUPABASE_SERVICE_ROLE_KEY manquant. Ajoutez-le dans /root/.env.aibs", flush=True)
+    sys.exit(1)
 
 # Fenêtre de rattrapage : 48h (couvre les pannes n8n jusqu'à 2 jours)
 CATCHUP_HOURS = 48

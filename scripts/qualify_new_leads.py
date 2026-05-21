@@ -27,9 +27,28 @@ import os
 import urllib.parse
 from pathlib import Path
 
+
+def _load_env_file(path="/root/.env.aibs"):
+    """Charge les variables clé=valeur depuis un fichier .env si elles ne sont pas déjà définies."""
+    try:
+        with open(path) as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith("#") and "=" in _line:
+                    _k, _, _v = _line.partition("=")
+                    os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
+    except FileNotFoundError:
+        pass
+
+
+_load_env_file()
+
 # ─── Config ───────────────────────────────────────────────────────────────────
 SB_URL = "https://lmlehskymbrqxqoepuuk.supabase.co"
-SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVoc2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwiZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os"
+SB_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+if not SB_KEY:
+    print("ERREUR CRITIQUE : SUPABASE_SERVICE_ROLE_KEY manquant. Ajoutez-le dans /root/.env.aibs", flush=True)
+    sys.exit(1)
 WA_RELAY_URL = os.environ.get("WA_RELAY_URL", "http://localhost:8767/send")
 WA_RELAY_TOKEN = os.environ.get("WA_RELAY_TOKEN", "aibs-wa-relay-xK9mP3qR")
 CALENDLY_URL = "https://calendly.com/caroline-art-aibs/30min"

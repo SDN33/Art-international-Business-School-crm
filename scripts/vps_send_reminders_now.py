@@ -19,6 +19,19 @@ from datetime import datetime, timezone, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+def _load_env_file(path="/root/.env.aibs"):
+    try:
+        with open(path) as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith("#") and "=" in _line:
+                    _k, _, _v = _line.partition("=")
+                    os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
+    except FileNotFoundError:
+        pass
+
+
+_load_env_file()
 # ── Credentials ────────────────────────────────────────────────────────────────
 CAL_TOKEN = (
     "eyJraWQiOiIxY2UxZTEzNjE3ZGNmNzY2YjNjZWJjY2Y4ZGM1YmFmYThhNjVlNjg0MDIzZjdj"
@@ -37,11 +50,10 @@ CAL_TOKEN = (
 )
 CAL_USER = "https://api.calendly.com/users/550f92e7-125e-4eee-b85f-734eb52ee143"
 SB_URL = "https://lmlehskymbrqxqoepuuk.supabase.co"
-SB_KEY = (
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtbGVo"
-    "c2t5bWJycXhxb2VwdXVrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1MzQzOCwi"
-    "ZXhwIjoyMDkwODI5NDM4fQ.0ZOZDA8mi5OasUopvXIs70x4kSv0WZUD5jLyMrqa7Os"
-)
+SB_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+if not SB_KEY:
+    print("ERREUR CRITIQUE : SUPABASE_SERVICE_ROLE_KEY manquant. Ajoutez-le dans /root/.env.aibs", flush=True)
+    sys.exit(1)
 NODE_PATH = "/root/.nvm/versions/node/v22.22.2/bin"
 DELAY_BETWEEN_SENDS = 60  # secondes entre chaque envoi WA (anti-spam)
 
