@@ -34,6 +34,7 @@ const PIPELINE_STATUS_COLORS: Record<string, string> = {
   "Nouveau lead": "bg-purple-100 text-purple-700",
   "Contacté WA": "bg-teal-100 text-teal-700",
   "À rappeler": "bg-amber-100 text-amber-700",
+  "RDV planifié": "bg-blue-100 text-blue-700",
   "Qualifié": "bg-indigo-100 text-indigo-700",
   "Qualifié AFDAS": "bg-emerald-100 text-emerald-700",
   "Inscrit": "bg-green-100 text-green-700",

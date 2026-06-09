@@ -107,6 +107,10 @@ The Registry file is kept au to date when files are added or removed:
 > [!WARNING]  
 > If the `registry.json` misses some changes you made, you MUST update the `scripts/generate-registry.mjs` to include those changes.
 
+## AIBS Infrastructure
+
+For AIBS-specific infrastructure documentation (WhatsApp bots, Calendly sync, VPS setup, cron jobs), see [AIBS-INFRA.md](./AIBS-INFRA.md).
+
 ## License
 
 This project is licensed under the MIT License, courtesy of [Marmelab](https://marmelab.com). See the [LICENSE.md](./LICENSE.md) file for details.
