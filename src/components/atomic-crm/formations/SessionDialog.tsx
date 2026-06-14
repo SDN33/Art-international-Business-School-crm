@@ -31,6 +31,8 @@ import {
   emptySessionForm,
 } from "./constants";
 
+const NO_FORMATION_VALUE = "__none__";
+
 export const useSessionDialog = (defaultFormationId?: number) => {
   const [dialogMode, setDialogMode] = useState<null | "create" | "edit">(null);
   const [selected, setSelected] = useState<Session | null>(null);
@@ -188,14 +190,19 @@ export const SessionDialog = ({
                 Formation associée
               </Label>
               <Select
-                value={form.formation_id}
-                onValueChange={(v) => updateField("formation_id", v)}
+                value={form.formation_id || NO_FORMATION_VALUE}
+                onValueChange={(v) =>
+                  updateField(
+                    "formation_id",
+                    v === NO_FORMATION_VALUE ? "" : v,
+                  )
+                }
               >
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Sélectionner une formation" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucune</SelectItem>
+                  <SelectItem value={NO_FORMATION_VALUE}>Aucune</SelectItem>
                   {formations?.map((f: any) => (
                     <SelectItem key={f.id} value={String(f.id)}>
                       {f.nom}
