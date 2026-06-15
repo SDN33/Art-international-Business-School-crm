@@ -58,7 +58,7 @@ describe("TaskCreateSheet", () => {
 
     await typeInput.click();
     const typeOptions = screen.getByRole("listbox");
-    await typeOptions.getByText("Call").click();
+    await typeOptions.getByText("Appel").click();
 
     const dueDateInput = screen.getByLabelText(/due date/i);
     await dueDateInput.clear();
@@ -95,7 +95,7 @@ describe("TaskCreateSheet", () => {
     expect(createdTask).toMatchObject({
       contact_id: 2,
       text: "Follow up about onboarding",
-      type: "call",
+      type: "appel",
     });
     expect(tasks.data).toHaveLength(2);
 

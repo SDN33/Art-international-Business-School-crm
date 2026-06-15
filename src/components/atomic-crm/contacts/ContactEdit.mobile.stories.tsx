@@ -25,7 +25,7 @@ export const ContactEditBasic = ({
   silent?: boolean;
 }) => (
   <StoryWrapper
-    initialEntries={["/contacts/1/show"]}
+    initialEntries={["/contacts/1"]}
     data={{
       contacts: [
         buildContact({
@@ -52,7 +52,7 @@ export const ContactEditWithEmailsAndPhones = ({
   silent?: boolean;
 }) => (
   <StoryWrapper
-    initialEntries={["/contacts/1/show"]}
+    initialEntries={["/contacts/1"]}
     data={{
       contacts: [
         buildContact({
@@ -73,7 +73,7 @@ export const ContactEditWithEmailsAndPhones = ({
 
 export const ContactEditWithError = () => (
   <StoryWrapper
-    initialEntries={["/contacts/1/show"]}
+    initialEntries={["/contacts/1"]}
     data={{
       contacts: [
         buildContact({
@@ -99,7 +99,7 @@ export const ContactEditWithError = () => (
 );
 
 export const ContactEditNotFound = () => (
-  <StoryWrapper initialEntries={["/contacts/1/show"]}>
+  <StoryWrapper initialEntries={["/contacts/1"]}>
     <Routes>
       <Route path="/contacts/:id" element={<ContactEdit />} />
     </Routes>

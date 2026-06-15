@@ -81,23 +81,24 @@ const ContactShowContentMobile = () => {
         onOpenChange={setEditOpen}
         contactId={record.id}
       />
-      <MobileHeader>
-        <MobileBackButton />
-        <div className="flex flex-1 min-w-0">
-          <Link to="/contacts" className="flex-1 min-w-0">
-            <h1 className="truncate text-xl font-semibold">{defaultTitle}</h1>
-          </Link>
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="rounded-full"
-          aria-label={translate("ra.action.edit")}
-          onClick={() => setEditOpen(true)}
-        >
-          <Pencil className="size-5" />
-        </Button>
+      <MobileHeader
+        left={<MobileBackButton />}
+        right={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            aria-label={translate("ra.action.edit")}
+            onClick={() => setEditOpen(true)}
+          >
+            <Pencil className="size-5" />
+          </Button>
+        }
+      >
+        <Link to="/contacts" className="flex-1 min-w-0">
+          <h1 className="truncate text-xl font-semibold">{defaultTitle}</h1>
+        </Link>
       </MobileHeader>
       <MobileContent>
         <div className="mb-6">
