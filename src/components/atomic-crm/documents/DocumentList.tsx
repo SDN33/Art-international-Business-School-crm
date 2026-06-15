@@ -1,6 +1,7 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import {
   useGetList,
+  useGetMany,
   useCreate,
   useUpdate,
   useDelete,
@@ -48,6 +49,7 @@ import {
 } from "lucide-react";
 import type { Document } from "../types";
 import { getSupabaseClient } from "../providers/supabase/supabase";
+import { optimizeImageUpload } from "../providers/commons/optimizeImageUpload";
 
 const TYPE_OPTIONS = [
   { value: "dossier-afdas", label: "Dossier AFDAS" },
@@ -92,7 +94,11 @@ async function uploadFileToStorage(
   docId?: number
 ): Promise<{ url: string; fileName: string }> {
   const supabase = getSupabaseClient();
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const uploadFile = await optimizeImageUpload(file, {
+    maxDimension: 2000,
+    quality: 0.84,
+  });
+  const safeName = uploadFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const timestamp = Date.now();
   const prefix = docId ? `documents/${docId}` : `documents/tmp_${timestamp}`;
   const path = `${prefix}/${timestamp}_${safeName}`;
@@ -110,14 +116,14 @@ async function uploadFileToStorage(
 
   const { error: uploadError } = await supabase.storage
     .from("attachments")
-    .upload(path, file, { upsert: true });
+    .upload(path, uploadFile, { upsert: true });
   if (uploadError) throw uploadError;
 
   const {
     data: { publicUrl },
   } = supabase.storage.from("attachments").getPublicUrl(path);
 
-  return { url: publicUrl, fileName: file.name };
+  return { url: publicUrl, fileName: uploadFile.name };
 }
 
 type FormData = {
@@ -171,17 +177,36 @@ export const DocumentList = () => {
     filter: buildFilter(),
   });
 
-  // Fetch contacts for display
+  const visibleContactIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (documents ?? [])
+            .map((doc) => doc.contact_id)
+            .filter((contactId): contactId is number => Boolean(contactId)),
+        ),
+      ),
+    [documents],
+  );
+
+  const { data: visibleContacts } = useGetMany("contacts", {
+    ids: visibleContactIds,
+  }, {
+    enabled: visibleContactIds.length > 0,
+  });
+
   const { data: contacts } = useGetList("contacts", {
     pagination: { page: 1, perPage: 1000 },
     sort: { field: "last_name", order: "ASC" },
+  }, {
+    enabled: dialogMode !== null,
   });
 
   const contactMap = new Map(
-    (contacts ?? []).map((c) => [
+    (visibleContacts ?? []).map((c) => [
       c.id,
       `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim(),
-    ])
+    ]),
   );
 
   const openCreate = () => {

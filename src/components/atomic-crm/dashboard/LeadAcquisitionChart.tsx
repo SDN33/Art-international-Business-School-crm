@@ -1,4 +1,3 @@
-import { useGetList } from "ra-core";
 import { useMemo } from "react";
 import { ResponsiveLine } from "@nivo/line";
 import { format, subDays, startOfDay } from "date-fns";
@@ -14,12 +13,11 @@ import type { Contact } from "../types";
 
 const DAYS_RANGE = 30;
 
-export const LeadAcquisitionChart = () => {
-  const { data: contacts, isPending } = useGetList<Contact>("contacts", {
-    pagination: { page: 1, perPage: 5000 },
-    sort: { field: "first_seen", order: "DESC" },
-  });
-
+export const LeadAcquisitionChart = ({
+  contacts,
+}: {
+  contacts: Contact[];
+}) => {
   const chartData = useMemo(() => {
     if (!contacts) return [];
 
@@ -61,8 +59,6 @@ export const LeadAcquisitionChart = () => {
     if (!chartData.length) return 0;
     return Math.round(totalPeriod / DAYS_RANGE);
   }, [totalPeriod, chartData]);
-
-  if (isPending) return null;
 
   return (
     <Card>

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useGetList,
+  useGetMany,
   useCreate,
   useUpdate,
   useDelete,
@@ -185,12 +186,16 @@ const MembersSheet = ({
       sort: { field: "added_at", order: "ASC" },
     });
 
-  const { data: memberDetails = [] } = useGetList<Contact>("contacts", {
-    filter: members.length > 0 ? { "id@in": `(${members.map((m) => m.contact_id).join(",")})` } : {},
-    pagination: { page: 1, perPage: 2000 },
-    sort: { field: "last_name", order: "ASC" },
-    enabled: members.length > 0,
-  } as Parameters<typeof useGetList>[1]);
+  const memberContactIds = useMemo(
+    () => Array.from(new Set(members.map((m) => m.contact_id))),
+    [members],
+  );
+
+  const { data: memberDetails = [] } = useGetMany<Contact>("contacts", {
+    ids: memberContactIds,
+  }, {
+    enabled: memberContactIds.length > 0,
+  });
 
   const { data: searchResults = [] } = useGetList<Contact>("contacts", {
     filter: contactSearch
@@ -437,22 +442,35 @@ export const ContactListsPage = () => {
     },
   );
 
-  // Count members per list
-  const { data: allMembers = [] } = useGetList<ListMember>(
+  const filtered = useMemo(
+    () =>
+      lists.filter(
+        (l) => !search || l.name.toLowerCase().includes(search.toLowerCase()),
+      ),
+    [lists, search],
+  );
+
+  const visibleListIds = useMemo(
+    () => filtered.map((list) => list.id),
+    [filtered],
+  );
+
+  const { data: visibleMembers = [] } = useGetList<ListMember>(
     "contact_list_members",
     {
-      pagination: { page: 1, perPage: 10000 },
+      filter:
+        visibleListIds.length > 0
+          ? { "list_id@in": `(${visibleListIds.join(",")})` }
+          : {},
+      pagination: { page: 1, perPage: 5000 },
       sort: { field: "id", order: "ASC" },
     },
+    { enabled: visibleListIds.length > 0 },
   );
   const memberCounts: Record<number, number> = {};
-  for (const m of allMembers) {
+  for (const m of visibleMembers) {
     memberCounts[m.list_id] = (memberCounts[m.list_id] ?? 0) + 1;
   }
-
-  const filtered = lists.filter(
-    (l) => !search || l.name.toLowerCase().includes(search.toLowerCase()),
-  );
 
   const handleDelete = async (list: ContactList) => {
     if (!confirm(`Supprimer la liste "${list.name}" et tous ses membres ?`)) return;
@@ -505,9 +523,15 @@ export const ContactListsPage = () => {
         {/* Stats */}
         {lists.length > 0 && (
           <div className="flex gap-4 text-sm text-muted-foreground mb-4">
-            <span>{lists.length} liste(s)</span>
+            <span>
+              {filtered.length} liste(s)
+              {search ? " affichee(s)" : ""}
+            </span>
             <span>·</span>
-            <span>{allMembers.length} membre(s) au total</span>
+            <span>
+              {visibleMembers.length} membre(s)
+              {search ? " sur la selection" : " au total"}
+            </span>
           </div>
         )}
 

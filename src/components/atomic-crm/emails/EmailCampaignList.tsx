@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useGetList,
   useCreate,
@@ -371,6 +371,7 @@ const RecipientsSheet = ({
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(
     new Set(),
   );
+  const normalizedContactSearch = contactSearch.trim();
 
   const { data: currentRecipients = [], refetch } = useGetList(
     "email_campaign_contacts",
@@ -382,16 +383,25 @@ const RecipientsSheet = ({
   );
 
   const { data: contacts = [] } = useGetList<Contact>("contacts", {
-    filter: contactSearch ? { "first_name@ilike": `%${contactSearch}%` } : {},
+    filter: normalizedContactSearch
+      ? { "first_name@ilike": `%${normalizedContactSearch}%` }
+      : {},
     pagination: { page: 1, perPage: 50 },
     sort: { field: "last_name", order: "ASC" },
+  }, {
+    enabled: normalizedContactSearch.length >= 2,
   });
+
+  const searchableContacts = useMemo(
+    () => (normalizedContactSearch.length >= 2 ? contacts : []),
+    [contacts, normalizedContactSearch],
+  );
 
   const handleAddSelected = async () => {
     const existingContactIds = new Set(
       currentRecipients.map((r: any) => r.contact_id),
     );
-    const toAdd = contacts.filter(
+    const toAdd = searchableContacts.filter(
       (c) =>
         selectedContactIds.has(c.id) &&
         !existingContactIds.has(c.id) &&
@@ -525,8 +535,13 @@ const RecipientsSheet = ({
                 placeholder="Rechercher un contact…"
                 className="mb-2"
               />
-              <div className="space-y-1 max-h-56 overflow-y-auto border rounded-md p-2">
-                {contacts
+              {normalizedContactSearch.length < 2 ? (
+                <p className="text-xs text-muted-foreground py-3 text-center border rounded-md">
+                  Saisissez au moins 2 caracteres pour lancer la recherche.
+                </p>
+              ) : (
+                <div className="space-y-1 max-h-56 overflow-y-auto border rounded-md p-2">
+                  {searchableContacts
                   .filter((c) => c.email_jsonb?.[0]?.email)
                   .map((c) => {
                     const alreadyAdded = currentRecipients.some(
@@ -556,7 +571,8 @@ const RecipientsSheet = ({
                       </label>
                     );
                   })}
-              </div>
+                </div>
+              )}
               <Button
                 className="mt-3 w-full"
                 onClick={handleAddSelected}

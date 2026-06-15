@@ -1,4 +1,3 @@
-import { useGetList } from "ra-core";
 import { useMemo } from "react";
 import {
   Card,
@@ -10,11 +9,8 @@ import { GitBranch } from "lucide-react";
 import type { Contact } from "../types";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 
-export const PipelineChart = () => {
+export const PipelineChart = ({ contacts }: { contacts: Contact[] }) => {
   const { dealStages } = useConfigurationContext();
-  const { data: contacts, isPending } = useGetList<Contact>("contacts", {
-    pagination: { page: 1, perPage: 5000 },
-  });
 
   const stages = useMemo(() => {
     if (!contacts || !dealStages) return [];
@@ -48,8 +44,6 @@ export const PipelineChart = () => {
 
   const maxCount = stages.length > 0 ? stages[0].count : 1;
   const total = stages.reduce((sum, s) => sum + s.count, 0);
-
-  if (isPending) return null;
 
   // Color gradient from blue to green
   const colors = [

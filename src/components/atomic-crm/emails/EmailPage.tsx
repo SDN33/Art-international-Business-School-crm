@@ -13,13 +13,11 @@ const TAB_TRIGGER =
 export const EmailPage = () => {
   const [activeTab, setActiveTab] = useState("inbox");
 
-  const { data: unreadEmails } = useGetList("received_emails", {
+  const { total: unreadCount = 0 } = useGetList("received_emails", {
     filter: { "is_read@eq": false },
-    pagination: { page: 1, perPage: 100 },
+    pagination: { page: 1, perPage: 1 },
     sort: { field: "id", order: "DESC" },
   });
-
-  const unreadCount = unreadEmails?.length ?? 0;
 
   return (
     <Tabs

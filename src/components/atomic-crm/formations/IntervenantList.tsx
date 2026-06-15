@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { TopToolbar } from "../layout/TopToolbar";
 import { getSupabaseClient } from "../providers/supabase/supabase";
+import { optimizeImageUpload } from "../providers/commons/optimizeImageUpload";
 
 const statutChoices = [
   { id: "Externe", name: "Externe" },
@@ -231,13 +232,16 @@ const IntervenantGrid = () => {
     setUploading(true);
     try {
       const supabase = getSupabaseClient();
-      const ext = file.name.split(".").pop();
+      const optimizedFile = await optimizeImageUpload(file, {
+        maxDimension: 1200,
+      });
+      const ext = optimizedFile.name.split(".").pop();
       const path = `intervenants/${intervenant.id}/avatar.${ext}`;
 
       await supabase.storage.from("attachments").remove([path]);
       const { error: uploadError } = await supabase.storage
         .from("attachments")
-        .upload(path, file, { upsert: true });
+        .upload(path, optimizedFile, { upsert: true });
 
       if (uploadError) throw uploadError;
 

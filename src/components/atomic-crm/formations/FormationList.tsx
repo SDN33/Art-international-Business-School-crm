@@ -15,6 +15,7 @@ import { FormationEdit } from "./FormationEdit";
 import { domaineColors } from "./constants";
 import { Clock, MapPin, Euro, GraduationCap, Camera } from "lucide-react";
 import { getSupabaseClient } from "../providers/supabase/supabase";
+import { optimizeImageUpload } from "../providers/commons/optimizeImageUpload";
 
 const domaineChoices = [
   { id: "Cinéma", name: "Cinéma" },
@@ -91,12 +92,13 @@ const FormationGrid = () => {
   const handleImageUpload = async (file: File, formationId: number) => {
     try {
       const supabase = getSupabaseClient();
-      const ext = file.name.split(".").pop();
+      const optimizedFile = await optimizeImageUpload(file);
+      const ext = optimizedFile.name.split(".").pop();
       const path = `formations/${formationId}/image.${ext}`;
       await supabase.storage.from("attachments").remove([path]);
       const { error: uploadError } = await supabase.storage
         .from("attachments")
-        .upload(path, file, { upsert: true });
+        .upload(path, optimizedFile, { upsert: true });
       if (uploadError) throw uploadError;
       const {
         data: { publicUrl },
@@ -146,6 +148,7 @@ const FormationGrid = () => {
                 alt={formation.nom}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 loading="lazy"
+                decoding="async"
               />
             ) : (
               <div className="w-full h-full bg-linear-to-br from-primary/10 to-primary/5 flex items-center justify-center">

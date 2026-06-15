@@ -33,12 +33,31 @@ export const Dashboard = () => {
       pagination: { page: 1, perPage: 1 },
     },
   );
+  const {
+    data: dashboardContacts,
+    isPending: isPendingDashboardContacts,
+  } = useGetList<Contact>("contacts", {
+    pagination: { page: 1, perPage: 5000 },
+    sort: { field: "first_seen", order: "DESC" },
+  }, {
+    enabled:
+      !isPendingContact &&
+      !isPendingContactNotes &&
+      Boolean(totalContact) &&
+      Boolean(totalContactNotes),
+  });
 
-  const isPending = isPendingContact || isPendingContactNotes || isPendingDeal;
+  const isPending =
+    isPendingContact ||
+    isPendingContactNotes ||
+    isPendingDeal ||
+    isPendingDashboardContacts;
 
   if (isPending) {
     return null;
   }
+
+  const contacts = dashboardContacts ?? [];
 
   if (!totalContact) {
     return (
@@ -61,17 +80,17 @@ export const Dashboard = () => {
   return (
     <div className="flex flex-col gap-8 mt-1">
       {/* KPI Summary Cards */}
-      <KpiCards />
+      <KpiCards contacts={contacts} />
 
       {/* Charts Row: Lead Acquisition + Formation Interest */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <LeadAcquisitionChart />
-        <FormationInterestChart />
+        <LeadAcquisitionChart contacts={contacts} />
+        <FormationInterestChart contacts={contacts} />
       </div>
 
       {/* Pipeline + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <PipelineChart />
+        <PipelineChart contacts={contacts} />
         <div className="lg:col-span-2">
           {totalDeal ? <DealsChart /> : null}
         </div>

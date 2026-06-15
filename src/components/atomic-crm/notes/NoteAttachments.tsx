@@ -1,4 +1,5 @@
-import { Paperclip } from "lucide-react";
+import { Image, Paperclip } from "lucide-react";
+import { useState } from "react";
 
 import type { AttachmentNote, ContactNote, DealNote } from "../types";
 
@@ -11,6 +12,8 @@ import type { AttachmentNote, ContactNote, DealNote } from "../types";
  * @returns `null` when there are no attachments, otherwise attachment previews and links.
  */
 export const NoteAttachments = ({ note }: { note: ContactNote | DealNote }) => {
+  const [showImagePreviews, setShowImagePreviews] = useState(false);
+
   if (!note.attachments || note.attachments.length === 0) {
     return null;
   }
@@ -25,25 +28,48 @@ export const NoteAttachments = ({ note }: { note: ContactNote | DealNote }) => {
   return (
     <div className="mt-2 flex flex-col gap-2">
       {imageAttachments.length > 0 && (
-        <div className="grid grid-cols-4 gap-8">
-          {imageAttachments.map((attachment: AttachmentNote, index: number) => (
-            <div key={index}>
-              <a
-                href={attachment.src}
-                title={attachment.title}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <img
-                  src={attachment.src}
-                  alt={attachment.title}
-                  className="w-[200px] h-[100px] object-cover cursor-pointer object-left border border-border"
-                />
-              </a>
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            className="flex w-fit items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowImagePreviews((previous) => !previous);
+            }}
+          >
+            <Image className="h-4 w-4" />
+            {showImagePreviews
+              ? "Masquer les apercus"
+              : `Afficher ${imageAttachments.length} image${
+                  imageAttachments.length > 1 ? "s" : ""
+                }`}
+          </button>
+          {showImagePreviews && (
+            <div className="grid grid-cols-4 gap-8">
+              {imageAttachments.map(
+                (attachment: AttachmentNote, index: number) => (
+                  <div key={index}>
+                    <a
+                      href={attachment.src}
+                      title={attachment.title}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <img
+                        src={attachment.src}
+                        alt={attachment.title}
+                        className="w-[200px] h-[100px] object-cover cursor-pointer object-left border border-border"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </a>
+                  </div>
+                ),
+              )}
             </div>
-          ))}
+          )}
         </div>
       )}
       {otherAttachments.length > 0 &&

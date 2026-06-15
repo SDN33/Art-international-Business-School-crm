@@ -17,6 +17,10 @@ import type {
 } from "../../types";
 import type { ConfigurationContextValue } from "../../root/ConfigurationContext";
 import { ATTACHMENTS_BUCKET } from "../commons/attachments";
+import {
+  optimizeImageUpload,
+  shouldOptimizeImageUpload,
+} from "../commons/optimizeImageUpload";
 import { getIsInitialized } from "./authProvider";
 import { getSupabaseClient } from "./supabase";
 
@@ -503,13 +507,23 @@ const uploadToBucket = async (fi: RAFile) => {
   }
 
   const file = fi.rawFile;
-  const fileParts = file.name.split(".");
-  const fileExt = fileParts.length > 1 ? `.${file.name.split(".").pop()}` : "";
+  if (!file) {
+    return fi;
+  }
+  const optimizedFile =
+    file && shouldOptimizeImageUpload(file)
+      ? await optimizeImageUpload(file)
+      : file;
+  const uploadFile = optimizedFile ?? file;
+  const fileParts = uploadFile.name.split(".");
+  const effectiveName = uploadFile.name;
+  const fileExt =
+    fileParts.length > 1 ? `.${effectiveName.split(".").pop()}` : "";
   const fileName = `${Math.random()}${fileExt}`;
   const filePath = `${fileName}`;
   const { error: uploadError } = await supabase.storage
     .from(ATTACHMENTS_BUCKET)
-    .upload(filePath, dataContent);
+    .upload(filePath, shouldOptimizeImageUpload(uploadFile) ? uploadFile : dataContent);
 
   if (uploadError) {
     console.error("uploadError", uploadError);
@@ -524,7 +538,7 @@ const uploadToBucket = async (fi: RAFile) => {
   fi.src = data.publicUrl;
 
   // save MIME type
-  const mimeType = file.type;
+  const mimeType = uploadFile.type;
   fi.type = mimeType;
 
   return fi;

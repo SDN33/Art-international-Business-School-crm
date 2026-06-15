@@ -1,4 +1,3 @@
-import { useGetList } from "ra-core";
 import { useMemo } from "react";
 import { ResponsivePie } from "@nivo/pie";
 import { GraduationCap } from "lucide-react";
@@ -41,14 +40,12 @@ const COLORS = [
   "#14b8a6",
 ];
 
-export const FormationInterestChart = () => {
-  const { data: contacts, isPending } = useGetList<Contact>("contacts", {
-    pagination: { page: 1, perPage: 5000 },
-  });
-
+export const FormationInterestChart = ({
+  contacts,
+}: {
+  contacts: Contact[];
+}) => {
   const pieData = useMemo(() => {
-    if (!contacts) return [];
-
     const counts: Record<string, number> = {};
     contacts.forEach((c) => {
       if (!c.formation_souhaitee) return;
@@ -65,8 +62,10 @@ export const FormationInterestChart = () => {
         color: COLORS[index % COLORS.length],
       }));
   }, [contacts]);
-
-  if (isPending) return null;
+  const contactsWithFormationCount = useMemo(
+    () => contacts.filter((c) => c.formation_souhaitee).length,
+    [contacts],
+  );
 
   return (
     <Card>
@@ -92,12 +91,22 @@ export const FormationInterestChart = () => {
             enableArcLinkLabels={false}
             arcLabelsSkipAngle={20}
             arcLabelsTextColor="#ffffff"
-            arcLabel={(d) => `${((d.value / contacts!.filter(c => c.formation_souhaitee).length) * 100).toFixed(0)}%`}
+            arcLabel={(d) =>
+              contactsWithFormationCount > 0
+                ? `${((d.value / contactsWithFormationCount) * 100).toFixed(0)}%`
+                : "0%"
+            }
             tooltip={({ datum }) => (
               <div className="bg-popover text-popover-foreground border rounded-md px-3 py-2 text-sm shadow-md">
                 <strong>{datum.label}</strong>
                 <br />
-                {datum.value} leads ({((datum.value / contacts!.filter(c => c.formation_souhaitee).length) * 100).toFixed(1)}%)
+                {datum.value} leads (
+                {contactsWithFormationCount > 0
+                  ? ((datum.value / contactsWithFormationCount) * 100).toFixed(
+                      1,
+                    )
+                  : "0.0"}
+                %)
               </div>
             )}
             legends={[

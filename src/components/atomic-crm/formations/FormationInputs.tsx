@@ -6,6 +6,7 @@ import { required, useRecordContext, useUpdate, useNotify, useRefresh } from "ra
 import { Label } from "@/components/ui/label";
 import { Camera, ImageIcon, X } from "lucide-react";
 import { getSupabaseClient } from "../providers/supabase/supabase";
+import { optimizeImageUpload } from "../providers/commons/optimizeImageUpload";
 
 const domaineChoices = [
   { id: "Cinéma", name: "Cinéma" },
@@ -108,13 +109,14 @@ const FormationImageUpload = () => {
     setUploading(true);
     try {
       const supabase = getSupabaseClient();
-      const ext = file.name.split(".").pop();
+      const optimizedFile = await optimizeImageUpload(file);
+      const ext = optimizedFile.name.split(".").pop();
       const path = `formations/${record.id}/image.${ext}`;
 
       await supabase.storage.from("attachments").remove([path]);
       const { error: uploadError } = await supabase.storage
         .from("attachments")
-        .upload(path, file, { upsert: true });
+        .upload(path, optimizedFile, { upsert: true });
 
       if (uploadError) throw uploadError;
 
@@ -179,6 +181,8 @@ const FormationImageUpload = () => {
               src={imageUrl}
               alt="Formation"
               className="w-full h-full object-cover"
+              loading="lazy"
+              decoding="async"
             />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
               <div className="flex items-center gap-1 text-white text-xs font-medium">

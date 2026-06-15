@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useGetList,
   useCreate,
@@ -271,6 +271,7 @@ const RecipientsSheet = ({
   const [deleteFn] = useDelete();
   const [contactSearch, setContactSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const normalizedContactSearch = contactSearch.trim();
 
   const {
     data: recipients = [],
@@ -282,25 +283,50 @@ const RecipientsSheet = ({
   });
 
   const { data: contacts = [] } = useGetList<Contact>("contacts", {
-    filter: contactSearch
-      ? { "first_name@ilike": `%${contactSearch}%` }
+    filter: normalizedContactSearch
+      ? { "first_name@ilike": `%${normalizedContactSearch}%` }
       : {},
     pagination: { page: 1, perPage: 100 },
     sort: { field: "last_name", order: "ASC" },
+  }, {
+    enabled: normalizedContactSearch.length >= 2,
   });
 
-  const existingIds = new Set(recipients.map((r) => String(r.contact_id)));
+  const searchableContacts = useMemo(
+    () => (normalizedContactSearch.length >= 2 ? contacts : []),
+    [contacts, normalizedContactSearch],
+  );
 
-  const eligibleContacts = contacts.filter(
-    (c) => c.email_jsonb?.[0]?.email && !existingIds.has(String(c.id)),
+  const existingIds = new Set(recipients.map((r) => String(r.contact_id)));
+  const existingEmails = new Set(
+    recipients.map((r) => (r.email ?? "").trim().toLowerCase()).filter(Boolean),
+  );
+
+  const eligibleContacts = searchableContacts.filter(
+    (c) => {
+      const email = c.email_jsonb?.[0]?.email;
+      if (!email) return false;
+      if (existingIds.has(String(c.id))) return false;
+      if (existingEmails.has(email.trim().toLowerCase())) return false;
+      return true;
+    },
   );
 
   const handleAdd = async () => {
     const toAdd = eligibleContacts.filter((c) => selected.has(String(c.id)));
     if (toAdd.length === 0) return;
+    // Dédup local par email avant l'insert (filet de sécurité si deux contacts
+    // partagent le même email)
+    const seen = new Set<string>();
+    const uniqueToAdd = toAdd.filter((c) => {
+      const key = c.email_jsonb[0].email.trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
     try {
       await Promise.all(
-        toAdd.map((c) =>
+        uniqueToAdd.map((c) =>
           create(
             "email_campaign_contacts",
             {
@@ -316,7 +342,7 @@ const RecipientsSheet = ({
           ),
         ),
       );
-      notify(`${toAdd.length} contact(s) ajouté(s)`, { type: "success" });
+      notify(`${uniqueToAdd.length} contact(s) ajouté(s)`, { type: "success" });
       setSelected(new Set());
       refetchRecipients();
     } catch {
@@ -456,7 +482,11 @@ const RecipientsSheet = ({
                   className="pl-9 h-8 text-sm"
                 />
               </div>
-              {eligibleContacts.length === 0 ? (
+              {normalizedContactSearch.length < 2 ? (
+                <p className="text-muted-foreground text-sm text-center py-3 border rounded-lg">
+                  Saisissez au moins 2 caracteres pour lancer la recherche.
+                </p>
+              ) : eligibleContacts.length === 0 ? (
                 <p className="text-muted-foreground text-sm text-center py-3">
                   {contactSearch
                     ? "Aucun contact trouvé"

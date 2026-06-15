@@ -66,6 +66,8 @@ export const AttachmentField = (props: FileFieldProps) => {
             title={titleValue}
             src={srcValue}
             className="w-[200px] h-[100px] object-cover cursor-pointer object-left border border-border"
+            loading="lazy"
+            decoding="async"
           />
         </a>
       ) : (

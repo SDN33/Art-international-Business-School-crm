@@ -1,4 +1,3 @@
-import { useGetList } from "ra-core";
 import { useMemo } from "react";
 import {
   Users,
@@ -38,12 +37,7 @@ const QUALIFIED_STATUSES = [
   "Devis envoyé",
 ];
 
-export const KpiCards = () => {
-  const { data: contacts, isPending } = useGetList<Contact>("contacts", {
-    pagination: { page: 1, perPage: 5000 },
-    sort: { field: "first_seen", order: "DESC" },
-  });
-
+export const KpiCards = ({ contacts }: { contacts: Contact[] }) => {
   const stats = useMemo(() => {
     if (!contacts) return null;
 
@@ -116,7 +110,7 @@ export const KpiCards = () => {
     };
   }, [contacts]);
 
-  if (isPending || !stats) return null;
+  if (!stats) return null;
 
   const cards = [
     {
